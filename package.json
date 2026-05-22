@@ -1,0 +1,52 @@
+{
+  "name": "quesale-backend",
+  "version": "1.0.0",
+  "description": "Backend API for QueSale - Event discovery platform",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "vite-node --watch src/server.js",
+    "start": "node src/server.js",
+    "build": "vite build src",
+    "preview": "node dist/server.js",
+    "lint": "eslint src --ext .js --fix",
+    "seed": "node scripts/seed.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "keywords": [
+    "events",
+    "api",
+    "nodejs",
+    "express",
+    "socket.io"
+  ],
+  "author": "QueSale Team",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.0",
+    "firebase-admin": "^11.11.1",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "mercadopago": "^1.5.17",
+    "mysql2": "^3.6.0",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^1.1.0",
+    "eslint": "^8.54.0",
+    "nodemon": "^3.0.2",
+    "prisma": "^5.22.0",
+    "vite": "^5.0.8",
+    "vite-node": "^1.0.4"
+  }
+}

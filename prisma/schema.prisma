@@ -1,0 +1,401 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  draft
+  active
+  cancelled
+  past
+}
+
+enum OrganizerRole {
+  admin
+  editor
+  viewer
+}
+
+model User {
+  id_user                 String             @id @db.VarChar(36)
+  firebase_uid            String             @unique @db.VarChar(128)
+  username                String             @unique @db.VarChar(50)
+  username_last_changed_at DateTime?         @db.DateTime
+  email                   String             @unique @db.VarChar(100)
+  verified                Boolean            @default(false)
+  created_at              DateTime           @default(now())
+  updated_at              DateTime           @updatedAt
+
+  profile                 UserProfile?
+  profilePosts            UserWallPost[]     @relation("ProfileUserPosts")
+  authoredPosts           UserWallPost[]     @relation("AuthorUserPosts")
+  authoredComments        UserWallComment[]  @relation("AuthorUserComments")
+  organizerCreated        Organizer[]
+  organizerAdmins         OrganizerAdmin[]
+  organizerFollowers      OrganizerFollower[]
+  eventsCreated           Event[]            @relation("UserEventsCreated")
+  tickets                 Ticket[]
+  savedEvents             SavedEvent[]
+  eventPosts              Post[]
+  eventComments           Comment[]
+  reviews                 Review[]
+  interests               UserInterest[]
+  notifications           Notification[]
+  postLikes               PostLike[]
+  commentLikes            CommentLike[]
+  wallPostLikes           UserWallPostLike[]
+  wallCommentLikes        UserWallCommentLike[]
+}
+
+model Notification {
+  id_notification BigInt   @id @default(autoincrement())
+  id_user         String   @db.VarChar(36)
+  type            String   @db.VarChar(50)
+  title           String   @db.VarChar(150)
+  message         String   @db.Text
+  data            Json?
+  is_read         Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  user            User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model FeaturedPricing {
+  id_pricing Int      @id @default(autoincrement())
+  level      Int
+  days       Int
+  price      Decimal  @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+
+  @@map("featured_pricing")
+}
+
+model UserProfile {
+  id_user                      String   @id @db.VarChar(36)
+  photo_url                    String?  @db.LongText
+  description                  String?  @db.Text
+  instagram                    String?  @db.VarChar(100)
+  instagram_verified           Boolean  @default(false)
+  instagram_verification_code  String?  @db.VarChar(16)
+  instagram_verified_at        DateTime? @db.DateTime
+  created_at                   DateTime @default(now())
+  updated_at                   DateTime @updatedAt
+
+  user                         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserWallPost {
+  id_post         BigInt   @id @default(autoincrement())
+  id_profile_user String   @db.VarChar(36)
+  id_author_user  String   @db.VarChar(36)
+  content         String   @db.Text
+  likes_count     Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  profileUser     User     @relation("ProfileUserPosts", fields: [id_profile_user], references: [id_user], onDelete: Cascade)
+  authorUser      User     @relation("AuthorUserPosts", fields: [id_author_user], references: [id_user], onDelete: Cascade)
+  comments        UserWallComment[]
+  likes           UserWallPostLike[]
+
+  @@map("user_wall_posts")
+}
+
+model UserWallComment {
+  id_comment     BigInt   @id @default(autoincrement())
+  id_post        BigInt
+  id_author_user String   @db.VarChar(36)
+  content        String   @db.Text
+  likes_count    Int      @default(0)
+  created_at     DateTime @default(now())
+
+  post           UserWallPost @relation(fields: [id_post], references: [id_post], onDelete: Cascade)
+  authorUser     User         @relation("AuthorUserComments", fields: [id_author_user], references: [id_user], onDelete: Cascade)
+  likes          UserWallCommentLike[]
+
+  @@map("user_wall_comments")
+}
+
+model UserWallPostLike {
+  id_wall_post_like BigInt @id @default(autoincrement())
+  id_post           BigInt
+  id_user           String @db.VarChar(36)
+  created_at        DateTime @default(now())
+
+  post              UserWallPost @relation(fields: [id_post], references: [id_post], onDelete: Cascade)
+  user              User         @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_post, id_user])
+  @@map("user_wall_post_likes")
+}
+
+model UserWallCommentLike {
+  id_wall_comment_like BigInt @id @default(autoincrement())
+  id_comment           BigInt
+  id_user              String @db.VarChar(36)
+  created_at           DateTime @default(now())
+
+  comment              UserWallComment @relation(fields: [id_comment], references: [id_comment], onDelete: Cascade)
+  user                 User            @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_comment, id_user])
+  @@map("user_wall_comment_likes")
+}
+
+model Organizer {
+  id_organizer String   @id @db.VarChar(36)
+  name         String   @unique @db.VarChar(100)
+  description  String?  @db.Text
+  id_creator   String   @db.VarChar(36)
+  logo_url     String?  @db.VarChar(255)
+  verified     Boolean  @default(false)
+  rating       Decimal? @db.Decimal(3, 2)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  creator      User     @relation(fields: [id_creator], references: [id_user], onDelete: Cascade)
+  events       Event[]
+  admins       OrganizerAdmin[]
+  followers    OrganizerFollower[]
+  featuredEvents FeaturedEvent[]
+
+  @@map("organizer")
+}
+
+model Event {
+  id_event       String       @id @db.VarChar(36)
+  title          String       @db.VarChar(150)
+  description    String?      @db.Text
+  id_creator     String?      @db.VarChar(36)
+  id_organizer   String       @db.VarChar(36)
+  date           DateTime
+  ubication      String       @db.VarChar(255)
+  latitude       Decimal?     @db.Decimal(10, 8)
+  longitude      Decimal?     @db.Decimal(11, 8)
+  thumbnail_url  String?      @db.VarChar(255)
+  status         EventStatus  @default(active)
+  featured_level Int          @default(0)
+  featured_until DateTime?
+  capacity       Int?
+  price          Decimal?     @db.Decimal(10, 2)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
+  organizer      Organizer    @relation(fields: [id_organizer], references: [id_organizer], onDelete: Cascade)
+  creator        User?        @relation("UserEventsCreated", fields: [id_creator], references: [id_user])
+  interests      EventInterest[]
+  tickets        Ticket[]
+  savedEvents    SavedEvent[]
+  posts          Post[]
+  reviews        Review[]
+  featuredEvents FeaturedEvent[]
+
+  @@map("events")
+}
+
+model Interest {
+  id_interest Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(50)
+  icon_url    String? @db.VarChar(255)
+  color       String? @db.VarChar(7)
+
+  events      EventInterest[]
+  users       UserInterest[]
+
+  @@map("interests")
+}
+
+model EventInterest {
+  id_event_interest BigInt  @id @default(autoincrement())
+  id_event          String  @db.VarChar(36)
+  id_interest       Int
+
+  event             Event   @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  interest          Interest @relation(fields: [id_interest], references: [id_interest], onDelete: Cascade)
+
+  @@unique([id_event, id_interest])
+  @@map("events_interests")
+}
+
+model UserInterest {
+  id_user_interest BigInt @id @default(autoincrement())
+  id_user          String @db.VarChar(36)
+  id_interest      Int
+
+  user             User   @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  interest         Interest @relation(fields: [id_interest], references: [id_interest], onDelete: Cascade)
+
+  @@unique([id_user, id_interest])
+  @@map("users_interests")
+}
+
+model OrganizerAdmin {
+  id_organizer_admin BigInt        @id @default(autoincrement())
+  id_user            String        @db.VarChar(36)
+  id_organizer       String        @db.VarChar(36)
+  role               OrganizerRole @default(admin)
+  created_at         DateTime      @default(now())
+
+  user               User           @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  organizer          Organizer      @relation(fields: [id_organizer], references: [id_organizer], onDelete: Cascade)
+
+  @@unique([id_user, id_organizer])
+  @@map("organizer_admins")
+}
+
+model OrganizerFollower {
+  id_organizer_follower BigInt @id @default(autoincrement())
+  id_user               String @db.VarChar(36)
+  id_organizer          String @db.VarChar(36)
+  created_at            DateTime @default(now())
+
+  user                  User      @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  organizer             Organizer @relation(fields: [id_organizer], references: [id_organizer], onDelete: Cascade)
+
+  @@unique([id_user, id_organizer])
+  @@map("organizer_followers")
+}
+
+model Ticket {
+  id_ticket    String   @id @db.VarChar(36)
+  uuid         String   @unique @db.VarChar(50)
+  id_event     String   @db.VarChar(36)
+  id_user      String   @db.VarChar(36)
+  state        Int      @default(1)
+  qr_code      Bytes?   @db.LongBlob
+  validated_at DateTime?
+  buy_date     DateTime @default(now())
+  created_at   DateTime @default(now())
+
+  event        Event    @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  user         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@map("tickets")
+}
+
+model SavedEvent {
+  id_saved_event BigInt  @id @default(autoincrement())
+  id_event       String  @db.VarChar(36)
+  id_user        String  @db.VarChar(36)
+  created_at     DateTime @default(now())
+
+  event          Event   @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  user           User    @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_user, id_event])
+  @@map("saved_events")
+}
+
+model PostType {
+  id_post_type Int    @id @default(autoincrement())
+  name         String @unique @db.VarChar(50)
+
+  posts        Post[]
+
+  @@map("post_type")
+}
+
+model Post {
+  id_post      BigInt   @id @default(autoincrement())
+  id_post_type Int
+  content      String   @db.Text
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  id_event     String   @db.VarChar(36)
+  id_user      String   @db.VarChar(36)
+  likes_count  Int      @default(0)
+  is_pinned    Boolean  @default(false)
+
+  postType     PostType @relation(fields: [id_post_type], references: [id_post_type])
+  event        Event    @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  user         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  comments     Comment[]
+  likes        PostLike[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id_comment  BigInt   @id @default(autoincrement())
+  content     String?  @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  id_post     BigInt
+  id_user     String   @db.VarChar(36)
+  likes_count Int      @default(0)
+
+  post        Post     @relation(fields: [id_post], references: [id_post], onDelete: Cascade)
+  user        User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  likes       CommentLike[]
+
+  @@map("comments")
+}
+
+model PostLike {
+  id_post_like BigInt   @id @default(autoincrement())
+  id_post      BigInt
+  id_user      String   @db.VarChar(36)
+  created_at   DateTime @default(now())
+
+  post         Post     @relation(fields: [id_post], references: [id_post], onDelete: Cascade)
+  user         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_post, id_user])
+  @@map("post_likes")
+}
+
+model CommentLike {
+  id_comment_like BigInt   @id @default(autoincrement())
+  id_comment      BigInt
+  id_user         String   @db.VarChar(36)
+  created_at      DateTime @default(now())
+
+  comment         Comment  @relation(fields: [id_comment], references: [id_comment], onDelete: Cascade)
+  user            User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_comment, id_user])
+  @@map("comment_likes")
+}
+
+model Review {
+  id_review   BigInt   @id @default(autoincrement())
+  id_event    String   @db.VarChar(36)
+  id_user     String   @db.VarChar(36)
+  rating      Int
+  comment     String?  @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  event       Event    @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  user        User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_user, id_event])
+  @@map("reviews")
+}
+
+model FeaturedEvent {
+  id_featured_event String   @id @db.VarChar(36)
+  id_event          String   @db.VarChar(36)
+  id_organizer      String   @db.VarChar(36)
+  level             Int
+  price             Decimal  @db.Decimal(10, 2)
+  payment_id        String?  @db.VarChar(255)
+  start_date        DateTime
+  end_date          DateTime
+  status            String   @db.VarChar(20)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  event             Event     @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  organizer         Organizer @relation(fields: [id_organizer], references: [id_organizer], onDelete: Cascade)
+
+  @@map("featured_events")
+}
