@@ -17,7 +17,6 @@ router.post(
     body('username').isLength({ min: 3, max: 20 }).trim(),
     body('password').isLength({ min: 8 }),
     body('confirmPassword').isLength({ min: 8 }),
-    body('photoURL').optional().isURL(),
   ],
   handleValidationErrors,
   AuthController.register

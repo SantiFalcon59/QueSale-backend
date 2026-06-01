@@ -51,7 +51,6 @@ export class AuthService {
         email,
         password,
         displayName: username,
-        photoURL: photoURL || null,
       });
 
       // Create user in database
