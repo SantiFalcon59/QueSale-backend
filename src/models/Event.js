@@ -44,29 +44,77 @@ export class EventModel {
    */
   static async getAll(limit, offset, filters = {}) {
     const where = {};
+    const andConditions = [];
 
-    if (filters.category) {
+    if (filters.category && filters.category !== 'ALL') {
       where.interests = {
         some: {
           interest: {
-            name: filters.category,
+            name: { equals: filters.category },
           },
         },
       };
+    }
+
+    if (filters.search) {
+      andConditions.push({
+        OR: [
+          { title: { contains: filters.search } },
+          { description: { contains: filters.search } },
+          { ubication: { contains: filters.search } },
+        ],
+      });
     }
 
     if (filters.location) {
       where.ubication = { contains: filters.location };
     }
 
+    if (filters.price === 'free') {
+      andConditions.push({
+        OR: [
+          { price: null },
+          { price: '0' },
+        ],
+      });
+    } else if (filters.price === 'paid') {
+      andConditions.push({
+        price: { not: null },
+        NOT: { price: '0' },
+      });
+    }
+
+    if (filters.priceMin !== undefined) {
+      andConditions.push({
+        price: { gte: String(filters.priceMin) },
+      });
+    }
+
+    if (filters.priceMax !== undefined) {
+      andConditions.push({
+        price: { lte: String(filters.priceMax) },
+      });
+    }
+
     if (filters.dateFrom || filters.dateTo) {
-      where.date = {};
-      if (filters.dateFrom) {
-        where.date.gte = new Date(filters.dateFrom);
-      }
-      if (filters.dateTo) {
-        where.date.lte = new Date(filters.dateTo);
-      }
+      const dateFilter = {};
+      if (filters.dateFrom) dateFilter.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) dateFilter.lte = new Date(filters.dateTo);
+      andConditions.push({ date: dateFilter });
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      andConditions.push({
+        tags: {
+          some: {
+            tag: { in: filters.tags },
+          },
+        },
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     return await prisma.event.findMany({
@@ -82,19 +130,67 @@ export class EventModel {
    */
   static async count(filters = {}) {
     const where = {};
+    const andConditions = [];
 
-    if (filters.category) {
+    if (filters.category && filters.category !== 'ALL') {
       where.interests = {
         some: {
           interest: {
-            name: filters.category,
+            name: { equals: filters.category },
           },
         },
       };
     }
 
+    if (filters.search) {
+      andConditions.push({
+        OR: [
+          { title: { contains: filters.search } },
+          { description: { contains: filters.search } },
+        ],
+      });
+    }
+
     if (filters.location) {
       where.ubication = { contains: filters.location };
+    }
+
+    if (filters.price === 'free') {
+      andConditions.push({
+        OR: [{ price: null }, { price: '0' }],
+      });
+    } else if (filters.price === 'paid') {
+      andConditions.push({
+        price: { not: null },
+        NOT: { price: '0' },
+      });
+    }
+
+    if (filters.priceMax) {
+      andConditions.push({
+        price: { lte: String(filters.priceMax), not: null },
+      });
+    }
+
+    if (filters.dateFrom || filters.dateTo) {
+      const dateFilter = {};
+      if (filters.dateFrom) dateFilter.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) dateFilter.lte = new Date(filters.dateTo);
+      andConditions.push({ date: dateFilter });
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      andConditions.push({
+        tags: {
+          some: {
+            tag: { in: filters.tags },
+          },
+        },
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     return await prisma.event.count({ where });

@@ -34,9 +34,16 @@ export class EventController {
         location: req.query.location,
         dateFrom: req.query.dateFrom,
         dateTo: req.query.dateTo,
+        quickDate: req.query.quickDate,
+        price: req.query.price,
+        priceMin: req.query.priceMin ? Number(req.query.priceMin) : undefined,
+        priceMax: req.query.priceMax ? Number(req.query.priceMax) : undefined,
+        search: req.query.search,
+        tags: req.query.tags ? req.query.tags.split(',') : undefined,
       };
       const result = await EventService.getEvents(req.pagination, filters);
-      sendPaginated(res, result.events, req.pagination, 'Events retrieved');
+      const pagination = { ...req.pagination, total: result.total };
+      sendPaginated(res, result.events, pagination, 'Events retrieved');
     } catch (error) {
       next(error);
     }

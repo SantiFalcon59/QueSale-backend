@@ -19,6 +19,8 @@ export default prisma;
 export const toSafeJSON = (obj) => {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj === 'bigint') return obj.toString();
+  if (obj instanceof Date) return obj.toISOString();
+  if (typeof obj?.toNumber === 'function') return obj.toNumber();
   if (Array.isArray(obj)) return obj.map(toSafeJSON);
   if (typeof obj === 'object') {
     const result = {};

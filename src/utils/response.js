@@ -35,7 +35,7 @@ export const sendPaginated = (res, data, pagination, message = 'Success', meta =
     pagination: {
       page: pagination.page,
       limit: pagination.limit,
-      total: data.length,
+      total: pagination.total ?? data.length,
       hasMore: data.length === pagination.limit,
     },
     ...(meta && { meta: toSafeJSON(meta) }),

@@ -1,13 +1,44 @@
 import EventModel from '../models/Event.js';
 import { generateId } from '../utils/generators.js';
 
-/**
- * Event Service
- */
+const getDateRange = (quickDate) => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let dateFrom, dateTo;
+
+  switch (quickDate) {
+    case 'today':
+      dateFrom = start;
+      dateTo = new Date(start.getTime() + 86400000);
+      break;
+    case 'tomorrow':
+      dateFrom = new Date(start.getTime() + 86400000);
+      dateTo = new Date(dateFrom.getTime() + 86400000);
+      break;
+    case 'weekend': {
+      const dayOfWeek = start.getDay();
+      const daysToSaturday = dayOfWeek <= 6 ? (6 - dayOfWeek) : 6;
+      const saturday = new Date(start.getTime() + daysToSaturday * 86400000);
+      dateFrom = saturday;
+      dateTo = new Date(saturday.getTime() + 2 * 86400000);
+      break;
+    }
+    case 'next-week':
+      dateFrom = new Date(start.getTime() + 7 * 86400000);
+      dateTo = new Date(dateFrom.getTime() + 7 * 86400000);
+      break;
+    case 'next-month':
+      dateFrom = new Date(start.getTime() + 30 * 86400000);
+      dateTo = new Date(dateFrom.getTime() + 30 * 86400000);
+      break;
+    default:
+      break;
+  }
+
+  return { dateFrom, dateTo };
+};
+
 export class EventService {
-  /**
-   * Create new event
-   */
   static async createEvent(eventData, organizerId, userId) {
     const eventId = generateId();
     const event = await EventModel.create({
@@ -38,9 +69,6 @@ export class EventService {
     return event;
   }
 
-  /**
-   * Get event details
-   */
   static async getEventDetails(eventId, userId = null) {
     const event = await EventModel.findById(eventId);
     if (!event) {
@@ -61,12 +89,18 @@ export class EventService {
     };
   }
 
-  /**
-   * Get all events with filters
-   */
   static async getEvents(pagination, filters = {}) {
-    const events = await EventModel.getAll(pagination.limit, pagination.offset, filters);
-    const total = await EventModel.count(filters);
+    const dbFilters = { ...filters };
+
+    if (filters.quickDate) {
+      const { dateFrom, dateTo } = getDateRange(filters.quickDate);
+      dbFilters.dateFrom = dateFrom?.toISOString();
+      dbFilters.dateTo = dateTo?.toISOString();
+      delete dbFilters.quickDate;
+    }
+
+    const events = await EventModel.getAll(pagination.limit, pagination.offset, dbFilters);
+    const total = await EventModel.count(dbFilters);
 
     const enrichedEvents = await Promise.all(
       events.map(async (event) => ({
@@ -101,26 +135,6 @@ export class EventService {
     return enrichedEvents;
   }
 
-  /**
-   * Get nearby events
-   */
-  static async getNearbyEvents(location, pagination) {
-    const events = await EventModel.getNearby(location, pagination.limit, pagination.offset);
-
-    const enrichedEvents = await Promise.all(
-      events.map(async (event) => ({
-        ...event,
-        attendeesCount: await EventModel.getAttendeesCount(event.id_event),
-        interests: (await EventModel.getInterests(event.id_event)).map(i => ({ id: i.id_interest, name: i.name })),
-      }))
-    );
-
-    return enrichedEvents;
-  }
-
-  /**
-   * Update event
-   */
   static async updateEvent(eventId, updateData, userId) {
     const event = await EventModel.findById(eventId);
     if (!event) {
@@ -144,9 +158,6 @@ export class EventService {
     return updated;
   }
 
-  /**
-   * Delete event
-   */
   static async deleteEvent(eventId, userId) {
     const event = await EventModel.findById(eventId);
     if (!event) {
@@ -161,16 +172,14 @@ export class EventService {
     return { message: 'Event deleted successfully' };
   }
 
-  /**
-   * Search events
-   */
   static async searchEvents(query, pagination) {
-    // Simple search - can be enhanced with full-text search later
     const filters = {
       category: query.category,
       location: query.location,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
+      search: query.search,
+      price: query.price,
     };
     return this.getEvents(pagination, filters);
   }
