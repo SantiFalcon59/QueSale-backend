@@ -24,8 +24,8 @@ export class UserController {
   static async updateProfile(req, res, next) {
     try {
       const userId = req.user.id;
-      const { username, email, description } = req.body;
-      const user = await UserService.updateProfile(userId, { username, email, description });
+      const { username, email, description, photo_url } = req.body;
+      const user = await UserService.updateProfile(userId, { username, email, description, photo_url });
       sendSuccess(res, user, 'Profile updated successfully');
     } catch (error) {
       next(error);

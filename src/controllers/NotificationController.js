@@ -20,6 +20,19 @@ export class NotificationController {
     }
   }
 
+  static async createNotification(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { type, fromId, fromName, fromPhoto, targetId, targetType, targetLink, message } = req.body;
+      const notification = await NotificationService.createNotification(userId, {
+        type, fromId, fromName, fromPhoto, targetId, targetType, targetLink, message
+      });
+      sendSuccess(res, notification, 'Notification created', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Mark as read
    */

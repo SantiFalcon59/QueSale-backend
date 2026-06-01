@@ -49,6 +49,8 @@ model User {
   commentLikes            CommentLike[]
   wallPostLikes           UserWallPostLike[]
   wallCommentLikes        UserWallCommentLike[]
+
+  @@map("users")
 }
 
 model Notification {
@@ -186,6 +188,8 @@ model Event {
   featured_until DateTime?
   capacity       Int?
   price          Decimal?     @db.Decimal(10, 2)
+  ticket_type    String?      @default("free") @db.VarChar(20)
+  ticket_url     String?      @db.VarChar(500)
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
 
@@ -197,6 +201,7 @@ model Event {
   posts          Post[]
   reviews        Review[]
   featuredEvents FeaturedEvent[]
+  tags           EventTag[]
 
   @@map("events")
 }
@@ -379,6 +384,18 @@ model Review {
 
   @@unique([id_user, id_event])
   @@map("reviews")
+}
+
+model EventTag {
+  id             BigInt   @id @default(autoincrement())
+  id_event       String   @db.VarChar(36)
+  tag            String   @db.VarChar(50)
+  created_at     DateTime @default(now())
+
+  event          Event    @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+
+  @@unique([id_event, tag], name: "event_tag_unique")
+  @@map("event_tags")
 }
 
 model FeaturedEvent {

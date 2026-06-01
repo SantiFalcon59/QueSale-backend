@@ -18,11 +18,21 @@ export class EventService {
       ubication: eventData.location,
       id_organizer: organizerId,
       id_creator: userId,
+      latitude: eventData.latitude,
+      longitude: eventData.longitude,
+      price: eventData.price,
+      capacity: eventData.capacity,
+      thumbnail_url: eventData.thumbnail_url,
+      ticket_type: eventData.ticket_type || 'free',
+      ticket_url: eventData.ticket_url,
     });
 
-    // Set interests if provided
     if (eventData.interestIds) {
       await EventModel.setInterests(eventId, eventData.interestIds);
+    }
+
+    if (eventData.tags) {
+      await EventModel.setTags(eventId, eventData.tags);
     }
 
     return event;
@@ -38,6 +48,7 @@ export class EventService {
     }
 
     const interests = await EventModel.getInterests(eventId);
+    const tags = await EventModel.getTags(eventId);
     const attendeesCount = await EventModel.getAttendeesCount(eventId);
     const isFavorited = userId ? await EventModel.isFavorited(eventId, userId) : false;
 
@@ -46,6 +57,7 @@ export class EventService {
       attendeesCount,
       isFavorited,
       interests: interests.map(i => ({ id: i.id_interest, name: i.name })),
+      tags,
     };
   }
 
@@ -61,6 +73,7 @@ export class EventService {
         ...event,
         attendeesCount: await EventModel.getAttendeesCount(event.id_event),
         interests: (await EventModel.getInterests(event.id_event)).map(i => ({ id: i.id_interest, name: i.name })),
+        tags: await EventModel.getTags(event.id_event),
       }))
     );
 
@@ -71,6 +84,21 @@ export class EventService {
       limit: pagination.limit,
       hasMore: events.length === pagination.limit,
     };
+  }
+
+  static async getNearbyEvents(location, pagination) {
+    const events = await EventModel.getNearby(location, pagination.limit, pagination.offset);
+
+    const enrichedEvents = await Promise.all(
+      events.map(async (event) => ({
+        ...event,
+        attendeesCount: await EventModel.getAttendeesCount(event.id_event),
+        interests: (await EventModel.getInterests(event.id_event)).map(i => ({ id: i.id_interest, name: i.name })),
+        tags: await EventModel.getTags(event.id_event),
+      }))
+    );
+
+    return enrichedEvents;
   }
 
   /**
@@ -107,6 +135,10 @@ export class EventService {
 
     if (updateData.interestIds) {
       await EventModel.setInterests(eventId, updateData.interestIds);
+    }
+
+    if (updateData.tags) {
+      await EventModel.setTags(eventId, updateData.tags);
     }
 
     return updated;

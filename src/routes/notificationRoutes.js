@@ -13,6 +13,13 @@ const router = express.Router();
 router.get('/', authenticateToken, paginationMiddleware, NotificationController.getNotifications);
 
 /**
+ * @route   POST /notifications/:userId
+ * @desc    Create a notification for a user
+ * @access  Private
+ */
+router.post('/:userId', authenticateToken, NotificationController.createNotification);
+
+/**
  * @route   PUT /notifications/mark-all-read
  * @desc    Mark all notifications as read
  * @access  Private

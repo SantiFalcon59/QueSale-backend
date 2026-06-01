@@ -1,4 +1,5 @@
 import UserModel from '../models/User.js';
+import prisma from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import { auth } from '../config/firebase.js';
 
@@ -31,7 +32,7 @@ export class AuthService {
    * Register user with email and password
    */
   static async registerUser(userData) {
-    const { email, username, password } = userData;
+    const { email, username, password, photoURL } = userData;
 
     // Check if user already exists
     const existing = await UserModel.findByEmail(email);
@@ -50,6 +51,7 @@ export class AuthService {
         email,
         password,
         displayName: username,
+        photoURL: photoURL || null,
       });
 
       // Create user in database
@@ -62,6 +64,11 @@ export class AuthService {
         created_at: new Date(),
         updated_at: new Date(),
       });
+
+      // Save profile photo if provided
+      if (photoURL) {
+        await UserModel.upsertProfile(firebaseUser.uid, { photo_url: photoURL });
+      }
 
       return {
         user,
@@ -123,11 +130,11 @@ export class AuthService {
       }
 
       let user = await UserModel.findById(uid);
+      console.log('Firebase login - User lookup:', { uid, found: !!user, username: user?.username });
 
       if (!user) {
-        // Create new user
         const username = await this.buildAvailableUsername(name || email.split('@')[0]);
-        console.log('Creating new user from Firebase:', { uid, email, username });
+        console.log('Creating new user from Firebase:', { uid, email, name, username });
         
         user = await UserModel.create({
           id_user: uid,
@@ -141,6 +148,12 @@ export class AuthService {
 
         // Save profile with photo if available
         if (photoURL) {
+          await UserModel.upsertProfile(uid, { photo_url: photoURL });
+        }
+      } else {
+        // Sync photo from Firebase if user exists but has no photo in DB
+        const profile = await prisma.userProfile.findUnique({ where: { id_user: uid } });
+        if ((!profile || !profile.photo_url) && photoURL) {
           await UserModel.upsertProfile(uid, { photo_url: photoURL });
         }
       }

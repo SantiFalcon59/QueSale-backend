@@ -22,6 +22,7 @@ import ticketRoutes from './routes/ticketRoutes.js';
 import organizerRoutes from './routes/organizerRoutes.js';
 import featuredRoutes from './routes/featuredRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 // Import WebSocket
 import { initializeWebSocket } from './websocket/chatSocket.js';
@@ -46,7 +47,10 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-app.use(helmet()); // Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: { policy: 'unsafe-none' },
+})); // Security headers
 app.use(cors(config.cors)); // CORS
 app.use(
   express.json({
@@ -66,6 +70,7 @@ app.use(
   })
 ); // URL encoded parser + raw body capture
 app.use(express.static(path.join(__dirname, '../public'))); // Static files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'))); // Uploads
 app.use(requestLogger); // Request logging
 app.use(paginationMiddleware); // Pagination
 
@@ -87,6 +92,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/featured', featuredRoutes);
 app.use('/api/organizers', organizerRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // API Documentation
 app.get('/api', (req, res) => {

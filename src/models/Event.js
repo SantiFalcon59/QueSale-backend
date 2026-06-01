@@ -8,7 +8,7 @@ export class EventModel {
    * Create new event
    */
   static async create(eventData) {
-    const { id_event, title, description, date, ubication, id_organizer, id_creator } = eventData;
+    const { id_event, title, description, date, ubication, id_organizer, id_creator, latitude, longitude, price, capacity, thumbnail_url, ticket_type, ticket_url } = eventData;
     await prisma.event.create({
       data: {
         id_event,
@@ -18,6 +18,13 @@ export class EventModel {
         ubication,
         id_organizer,
         id_creator,
+        latitude: latitude ? String(latitude) : null,
+        longitude: longitude ? String(longitude) : null,
+        price: price ? String(price) : null,
+        capacity: capacity || null,
+        thumbnail_url: thumbnail_url || null,
+        ticket_type: ticket_type || 'free',
+        ticket_url: ticket_url || null,
       },
     });
     return this.findById(id_event);
@@ -131,6 +138,27 @@ export class EventModel {
     });
   }
 
+  static async getTags(eventId) {
+    const result = await prisma.eventTag.findMany({
+      where: { id_event: eventId },
+      select: { tag: true },
+    });
+    return result.map(item => item.tag);
+  }
+
+  static async setTags(eventId, tags) {
+    await prisma.$transaction(async (tx) => {
+      await tx.eventTag.deleteMany({ where: { id_event: eventId } });
+
+      if (tags && tags.length > 0) {
+        await tx.eventTag.createMany({
+          data: tags.map(tag => ({ id_event: eventId, tag })),
+          skipDuplicates: true,
+        });
+      }
+    });
+  }
+
   /**
    * Get event attendees count
    */
@@ -180,6 +208,7 @@ export class EventModel {
       await tx.savedEvent.deleteMany({ where: { id_event: id } });
       await tx.post.deleteMany({ where: { id_event: id } });
       await tx.eventInterest.deleteMany({ where: { id_event: id } });
+      await tx.eventTag.deleteMany({ where: { id_event: id } });
       await tx.event.delete({ where: { id_event: id } });
     });
   }

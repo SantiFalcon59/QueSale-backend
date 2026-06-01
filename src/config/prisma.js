@@ -3,26 +3,29 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-/**
- * Helper to build Database URL from individual components
- */
-const buildDatabaseUrl = () => {
-  const { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME } = process.env;
-  
-  // If DATABASE_URL is already provided (e.g. in production), use it
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-
-  // Otherwise, construct it
-  const password = DB_PASSWORD ? `:${DB_PASSWORD}` : '';
-  return `mysql://${DB_USER}${password}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
-};
+BigInt.prototype.toJSON = function() { return this.toString(); };
 
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: buildDatabaseUrl(),
+      url: process.env.DATABASE_URL || `mysql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
     },
   },
+  log: ['error'],
 });
 
 export default prisma;
+
+export const toSafeJSON = (obj) => {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return obj.toString();
+  if (Array.isArray(obj)) return obj.map(toSafeJSON);
+  if (typeof obj === 'object') {
+    const result = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = toSafeJSON(value);
+    }
+    return result;
+  }
+  return obj;
+};

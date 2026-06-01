@@ -44,6 +44,18 @@ export class NotificationService {
     return { success: true };
   }
 
+  static async createNotification(userId, notificationData) {
+    const { type, fromId, fromName, fromPhoto, targetId, targetType, targetLink, message } = notificationData;
+    const notification = await NotificationModel.create({
+      id_user: userId,
+      type,
+      title: fromName,
+      message,
+      data: { fromId, fromPhoto, targetId, targetType, targetLink },
+    });
+    return notification;
+  }
+
   /**
    * Internal helper to create and send notification
    */

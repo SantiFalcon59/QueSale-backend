@@ -10,13 +10,13 @@ export class AuthController {
    */
   static async register(req, res, next) {
     try {
-      const { email, username, password, confirmPassword } = req.body;
+      const { email, username, password, confirmPassword, photoURL } = req.body;
 
       if (password !== confirmPassword) {
         return sendError(res, 'Passwords do not match', 400);
       }
 
-      const result = await AuthService.registerUser({ email, username, password });
+      const result = await AuthService.registerUser({ email, username, password, photoURL });
       sendSuccess(res, result, 'User registered successfully', 201);
     } catch (error) {
       next(error);

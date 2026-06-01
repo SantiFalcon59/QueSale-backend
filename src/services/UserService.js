@@ -1,4 +1,5 @@
 import UserModel from '../models/User.js';
+import prisma from '../config/prisma.js';
 
 /**
  * User Service
@@ -37,7 +38,7 @@ export class UserService {
    * Update user profile
    */
   static async updateProfile(userId, updateData) {
-    const { description, ...userFields } = updateData;
+    const { description, photo_url, ...userFields } = updateData;
     let user = await UserModel.findById(userId);
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };
@@ -67,8 +68,8 @@ export class UserService {
     if (Object.keys(userFields).length > 0) {
       user = await UserModel.update(userId, userFields);
     }
-    if (description !== undefined) {
-      user = await UserModel.upsertProfile(userId, { description });
+    if (description !== undefined || photo_url !== undefined) {
+      user = await UserModel.upsertProfile(userId, { description, photo_url });
     }
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };
@@ -140,7 +141,14 @@ export class UserService {
     const adminOrganizations = await UserModel.getAdminOrganizations(userId);
     const frequentOrganizations = await UserModel.getFrequentOrganizations(userId);
 
-    // Return only public-safe data
+    const eventsCount = await prisma.event.count({ where: { id_creator: userId } });
+    const followersCount = await prisma.organizerFollower.count({
+      where: { organizer: { id_creator: userId } },
+    });
+    const followingCount = await prisma.organizerFollower.count({
+      where: { id_user: userId },
+    });
+
     return {
       id: user.id_user,
       username: user.username,
@@ -152,6 +160,12 @@ export class UserService {
       usernameLastChangedAt: user.username_last_changed_at,
       verified: !!user.verified,
       createdAt: user.created_at,
+      stats: {
+        events: eventsCount,
+        followers: followersCount,
+        following: followingCount,
+        vibeScore: 0,
+      },
       recentEvents,
       organizations: {
         admin: adminOrganizations,

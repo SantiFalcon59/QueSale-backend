@@ -322,7 +322,7 @@ export class UserModel {
     const posts = await prisma.userWallPost.findMany({
       where: { id_profile_user: profileUserId },
       include: {
-        authorUser: { select: { username: true, email: true } },
+        authorUser: { select: { username: true, email: true, profile: { select: { photo_url: true } } } },
       },
       orderBy: { created_at: 'desc' },
       take: limit,
@@ -333,6 +333,7 @@ export class UserModel {
       ...post,
       author_username: post.authorUser?.username || null,
       author_email: post.authorUser?.email || null,
+      author_photo: post.authorUser?.profile?.photo_url || null,
     }));
   }
 
@@ -347,7 +348,7 @@ export class UserModel {
     const comments = await prisma.userWallComment.findMany({
       where: { id_post: { in: postIds } },
       include: {
-        authorUser: { select: { username: true, email: true } },
+        authorUser: { select: { username: true, email: true, profile: { select: { photo_url: true } } } },
       },
       orderBy: { created_at: 'asc' },
     });
@@ -355,6 +356,7 @@ export class UserModel {
     return comments.map(comment => ({
       ...comment,
       author_username: comment.authorUser?.username || null,
+      author_photo: comment.authorUser?.profile?.photo_url || null,
       author_email: comment.authorUser?.email || null,
     }));
   }
@@ -363,26 +365,51 @@ export class UserModel {
    * Create a wall post
    */
   static async createWallPost(profileUserId, authorUserId, content) {
-    await prisma.userWallPost.create({
+    const post = await prisma.userWallPost.create({
       data: {
         id_profile_user: profileUserId,
         id_author_user: authorUserId,
         content,
       },
+      include: {
+        authorUser: { include: { profile: true } },
+      },
     });
+    return {
+      id_post: post.id_post,
+      content: post.content,
+      likes_count: post.likes_count,
+      created_at: post.created_at,
+      id_author_user: post.id_author_user,
+      author_username: post.authorUser?.username || null,
+      author_photo: post.authorUser?.profile?.photo_url || null,
+    };
   }
 
   /**
    * Create a wall comment
    */
   static async createWallComment(postId, authorUserId, content) {
-    await prisma.userWallComment.create({
+    const comment = await prisma.userWallComment.create({
       data: {
         id_post: postId,
         id_author_user: authorUserId,
         content,
       },
+      include: {
+        authorUser: { include: { profile: true } },
+      },
     });
+    return {
+      id_comment: comment.id_comment,
+      content: comment.content,
+      likes_count: comment.likes_count,
+      created_at: comment.created_at,
+      id_author_user: comment.id_author_user,
+      id_post: comment.id_post,
+      author_username: comment.authorUser?.username || null,
+      author_photo: comment.authorUser?.profile?.photo_url || null,
+    };
   }
 
   /**

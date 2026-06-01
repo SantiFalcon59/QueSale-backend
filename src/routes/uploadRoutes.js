@@ -1,0 +1,76 @@
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { authenticateToken } from '../middleware/auth.js';
+import { sendSuccess, sendError } from '../utils/response.js';
+import UserModel from '../models/User.js';
+import OrganizerModel from '../models/Organizer.js';
+import EventModel from '../models/Event.js';
+
+const router = express.Router();
+
+const profileDir = path.join(process.cwd(), 'uploads', 'profile-photos');
+const organizerDir = path.join(process.cwd(), 'uploads', 'organizer-logos');
+const eventDir = path.join(process.cwd(), 'uploads', 'event-media');
+[profileDir, organizerDir, eventDir].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+
+const createStorage = (dir) => multer.diskStorage({
+  destination: (req, file, cb) => cb(null, dir),
+  filename: (req, file, cb) => {
+    const uniqueName = `${req.user.id}_${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) cb(null, true);
+  else cb(new Error('Only image files are allowed'));
+};
+
+const profileUpload = multer({ storage: createStorage(profileDir), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
+const organizerUpload = multer({ storage: createStorage(organizerDir), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
+const eventUpload = multer({ storage: createStorage(eventDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
+
+router.post('/', authenticateToken, profileUpload.single('photo'), async (req, res, next) => {
+  try {
+    if (!req.file) return sendError(res, 'No file uploaded', 400);
+    const photoUrl = `/uploads/profile-photos/${req.file.filename}`;
+    await UserModel.upsertProfile(req.user.id, { photo_url: photoUrl });
+    sendSuccess(res, { photo_url: photoUrl }, 'Photo uploaded successfully', 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/organizer-logo', authenticateToken, organizerUpload.single('logo'), async (req, res, next) => {
+  try {
+    if (!req.file) return sendError(res, 'No file uploaded', 400);
+    const { organizerId } = req.body;
+    if (!organizerId) return sendError(res, 'organizerId is required', 400);
+
+    const logoUrl = `/uploads/organizer-logos/${req.file.filename}`;
+    await OrganizerModel.update(organizerId, { logo_url: logoUrl });
+    sendSuccess(res, { logo_url: logoUrl }, 'Logo uploaded successfully', 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/event-media', authenticateToken, eventUpload.single('media'), async (req, res, next) => {
+  try {
+    if (!req.file) return sendError(res, 'No file uploaded', 400);
+    const { eventId } = req.body;
+    if (!eventId) return sendError(res, 'eventId is required', 400);
+
+    const mediaUrl = `/uploads/event-media/${req.file.filename}`;
+    await EventModel.update(eventId, { thumbnail_url: mediaUrl });
+    sendSuccess(res, { media_url: mediaUrl }, 'Event media uploaded successfully', 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;
