@@ -49,6 +49,8 @@ model User {
   commentLikes            CommentLike[]
   wallPostLikes           UserWallPostLike[]
   wallCommentLikes        UserWallCommentLike[]
+  followers               UserFollower[]      @relation("UserFollowers")
+  following               UserFollower[]      @relation("UserFollowing")
 
   @@map("users")
 }
@@ -396,6 +398,19 @@ model EventTag {
 
   @@unique([id_event, tag], name: "event_tag_unique")
   @@map("event_tags")
+}
+
+model UserFollower {
+  id_user_follower BigInt   @id @default(autoincrement())
+  id_user          String   @db.VarChar(36)
+  id_follower      String   @db.VarChar(36)
+  created_at       DateTime @default(now())
+
+  user             User     @relation("UserFollowers", fields: [id_user], references: [id_user], onDelete: Cascade)
+  follower         User     @relation("UserFollowing", fields: [id_follower], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_user, id_follower])
+  @@map("user_followers")
 }
 
 model FeaturedEvent {

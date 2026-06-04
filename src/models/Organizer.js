@@ -72,6 +72,37 @@ export class OrganizerModel {
   }
 
   /**
+   * Search organizers by name
+   */
+  static async searchByName(query, limit = 20, offset = 0) {
+    const organizers = await prisma.organizer.findMany({
+      where: { name: { contains: query } },
+      include: { _count: { select: { events: true, followers: true } } },
+      orderBy: { created_at: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+
+    return organizers.map(item => {
+      const { _count, ...rest } = item;
+      return {
+        ...rest,
+        events_count: _count.events,
+        followers_count: _count.followers,
+      };
+    });
+  }
+
+  /**
+   * Count organizers matching search query
+   */
+  static async countSearchByName(query) {
+    return await prisma.organizer.count({
+      where: { name: { contains: query } },
+    });
+  }
+
+  /**
    * Get organizers by creator
    */
   static async getByCreator(userId, limit, offset) {

@@ -510,6 +510,156 @@ export class UserModel {
       }
     });
   }
+
+  /**
+   * Search users by username (public)
+   */
+  static async searchUsers(query, limit = 20, offset = 0) {
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { contains: query } },
+          { email: { contains: query } },
+        ],
+      },
+      include: {
+        profile: { select: { photo_url: true, description: true } },
+        followers: { select: { id_follower: true } },
+      },
+      take: limit,
+      skip: offset,
+      orderBy: { created_at: 'desc' },
+    });
+
+    return users.map(user => ({
+      id_user: user.id_user,
+      username: user.username,
+      photo_url: user.profile?.photo_url || null,
+      description: user.profile?.description || null,
+      followers_count: user.followers.length,
+      created_at: user.created_at,
+    }));
+  }
+
+  /**
+   * Count users matching search query
+   */
+  static async countSearchUsers(query) {
+    return await prisma.user.count({
+      where: {
+        OR: [
+          { username: { contains: query } },
+          { email: { contains: query } },
+        ],
+      },
+    });
+  }
+
+  /**
+   * Follow a user
+   */
+  static async followUser(userId, followerId) {
+    try {
+      return await prisma.userFollower.create({
+        data: { id_user: userId, id_follower: followerId },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') return null; // Already following
+      throw error;
+    }
+  }
+
+  /**
+   * Unfollow a user
+   */
+  static async unfollowUser(userId, followerId) {
+    try {
+      return await prisma.userFollower.delete({
+        where: {
+          id_user_id_follower: { id_user: userId, id_follower: followerId },
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') return null; // Not following
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user is following another user
+   */
+  static async isFollowing(userId, followerId) {
+    const follow = await prisma.userFollower.findUnique({
+      where: {
+        id_user_id_follower: { id_user: userId, id_follower: followerId },
+      },
+    });
+    return !!follow;
+  }
+
+  /**
+   * Get followers of a user
+   */
+  static async getFollowers(userId, limit = 20, offset = 0) {
+    const follows = await prisma.userFollower.findMany({
+      where: { id_user: userId },
+      include: {
+        follower: {
+          include: { profile: { select: { photo_url: true, description: true } } },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+
+    return follows.map(f => ({
+      id_user: f.follower.id_user,
+      username: f.follower.username,
+      photo_url: f.follower.profile?.photo_url || null,
+      description: f.follower.profile?.description || null,
+      followed_at: f.created_at,
+    }));
+  }
+
+  /**
+   * Get users that a user is following
+   */
+  static async getFollowing(userId, limit = 20, offset = 0) {
+    const follows = await prisma.userFollower.findMany({
+      where: { id_follower: userId },
+      include: {
+        user: {
+          include: { profile: { select: { photo_url: true, description: true } } },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+
+    return follows.map(f => ({
+      id_user: f.user.id_user,
+      username: f.user.username,
+      photo_url: f.user.profile?.photo_url || null,
+      description: f.user.profile?.description || null,
+      followed_at: f.created_at,
+    }));
+  }
+
+  /**
+   * Count followers of a user
+   */
+  static async countFollowers(userId) {
+    return await prisma.userFollower.count({ where: { id_user: userId } });
+  }
+
+  /**
+   * Count users that a user is following
+   */
+  static async countFollowing(userId) {
+    return await prisma.userFollower.count({ where: { id_follower: userId } });
+  }
 }
 
 export default UserModel;

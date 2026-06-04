@@ -24,6 +24,7 @@ import featuredRoutes from './routes/featuredRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import interestRoutes from './routes/interestRoutes.js';
+import communityRoutes from './routes/communityRoutes.js';
 
 // Import WebSocket
 import { initializeWebSocket } from './websocket/chatSocket.js';
@@ -95,6 +96,7 @@ app.use('/api/organizers', organizerRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/categories', interestRoutes);
+app.use('/api/community', communityRoutes);
 
 // API Documentation
 app.get('/api', (req, res) => {
