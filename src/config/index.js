@@ -25,7 +25,11 @@ export const config = {
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || '*',
+    origin: [
+      'http://localhost:5082',
+      'https://quesale.splindux.com',
+      ...(process.env.CORS_ORIGIN?.split(',') || []),
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
