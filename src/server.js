@@ -42,6 +42,7 @@ const server = http.createServer(app);
 // Initialize WebSocket
 const io = initializeWebSocket(server);
 
+
 // Make io available to routes
 app.use((req, res, next) => {
   req.io = io;
@@ -53,6 +54,9 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   crossOriginOpenerPolicy: { policy: 'unsafe-none' },
 })); // Security headers
+
+console.log("CORS CONFIG:", config.cors);
+
 app.use(cors(config.cors)); // CORS
 app.use(
   express.json({
