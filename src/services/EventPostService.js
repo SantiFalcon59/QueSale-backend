@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { isEventModerator, canCreateAnnouncement } from '../utils/organizerCheck.js';
 
 /**
  * Event Post Service
@@ -40,6 +41,13 @@ export class EventPostService {
   static async createPost(eventId, userId, content, type = 'comment') {
     const typeName = (type || 'comment').toLowerCase();
 
+    if (typeName === 'announcement') {
+      const canAnnounce = await canCreateAnnouncement(userId, eventId);
+      if (!canAnnounce) {
+        throw { statusCode: 403, message: 'Only organizers can create announcements' };
+      }
+    }
+
     let postType = await prisma.postType.findUnique({ where: { name: typeName } });
     if (!postType) {
       postType = await prisma.postType.create({ data: { name: typeName } });
@@ -69,8 +77,8 @@ export class EventPostService {
 
     if (!post) return false;
 
-    // Author or Event Creator can delete
-    if (post.id_user !== userId && post.event.id_creator !== userId) {
+    const isMod = await isEventModerator(userId, post.id_event);
+    if (post.id_user !== userId && !isMod) {
       throw { statusCode: 403, message: 'Not authorized to delete this post' };
     }
 
@@ -96,8 +104,8 @@ export class EventPostService {
 
     if (!comment) return false;
 
-    // Author or Event Creator can delete
-    if (comment.id_user !== userId && comment.post.event.id_creator !== userId) {
+    const isMod = await isEventModerator(userId, comment.post.event.id_event);
+    if (comment.id_user !== userId && !isMod) {
       throw { statusCode: 403, message: 'Not authorized to delete this comment' };
     }
 

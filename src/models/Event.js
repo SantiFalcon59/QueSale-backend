@@ -86,13 +86,13 @@ export class EventModel {
 
     if (filters.priceMin !== undefined) {
       andConditions.push({
-        price: { gte: String(filters.priceMin) },
+        price: { gte: filters.priceMin },
       });
     }
 
     if (filters.priceMax !== undefined) {
       andConditions.push({
-        price: { lte: String(filters.priceMax) },
+        price: { lte: filters.priceMax },
       });
     }
 
@@ -166,9 +166,15 @@ export class EventModel {
       });
     }
 
-    if (filters.priceMax) {
+    if (filters.priceMin !== undefined) {
       andConditions.push({
-        price: { lte: String(filters.priceMax), not: null },
+        price: { gte: filters.priceMin, not: null },
+      });
+    }
+
+    if (filters.priceMax !== undefined) {
+      andConditions.push({
+        price: { lte: filters.priceMax, not: null },
       });
     }
 

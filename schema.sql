@@ -439,7 +439,9 @@ INSERT INTO `interests` (`name`, `color`) VALUES
 ('Cultura Pop', '#9D4EDD'),
 ('Tecnología', '#3A86FF'),
 ('Deporte', '#06FFA5'),
-('Gastronomía', '#FB5607');
+('Gastronomía', '#FB5607'),
+('Arte', '#FFB703'),
+('Música', '#8ECAE6');
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

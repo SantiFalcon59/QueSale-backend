@@ -1,6 +1,7 @@
 import express from 'express';
 import EventController from '../controllers/EventController.js';
 import EventPostController from '../controllers/EventPostController.js';
+import ModeratorController from '../controllers/ModeratorController.js';
 import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.js';
 import { paginationMiddleware, handleValidationErrors } from '../middleware/validators.js';
 import { body } from 'express-validator';
@@ -49,6 +50,18 @@ router.post(
   ],
   handleValidationErrors,
   EventController.createEvent
+);
+
+/**
+ * @route   GET /events/search
+ * @desc    Search events
+ * @access  Public
+ */
+router.get(
+  '/search',
+  optionalAuthenticateToken,
+  paginationMiddleware,
+  EventController.searchEvents
 );
 
 /**
@@ -149,15 +162,39 @@ router.put(
 router.delete('/:eventId', authenticateToken, EventController.deleteEvent);
 
 /**
- * @route   GET /events/search
- * @desc    Search events
- * @access  Public
+ * @route   GET /events/:eventId/moderator-status
+ * @desc    Check if current user is moderator/organizer for this event
+ * @access  Private
  */
-router.get(
-  '/search',
-  optionalAuthenticateToken,
-  paginationMiddleware,
-  EventController.searchEvents
+router.get('/:eventId/moderator-status', authenticateToken, EventController.getModeratorStatus);
+
+// --- Moderator routes ---
+
+/**
+ * @route   POST /events/:eventId/block
+ * @desc    Block a user from event chat/wall
+ * @access  Private (organizer/moderator)
+ */
+router.post(
+  '/:eventId/block',
+  authenticateToken,
+  [body('userId').notEmpty().trim(), body('reason').optional().trim()],
+  handleValidationErrors,
+  ModeratorController.blockUser
 );
+
+/**
+ * @route   DELETE /events/:eventId/block/:userId
+ * @desc    Unblock a user from event
+ * @access  Private (organizer/moderator)
+ */
+router.delete('/:eventId/block/:userId', authenticateToken, ModeratorController.unblockUser);
+
+/**
+ * @route   GET /events/:eventId/blocked-users
+ * @desc    List blocked users for an event
+ * @access  Private (organizer/moderator)
+ */
+router.get('/:eventId/blocked-users', authenticateToken, ModeratorController.getBlockedUsers);
 
 export default router;

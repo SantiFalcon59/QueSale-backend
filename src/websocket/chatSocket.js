@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import { verifyToken } from '../utils/jwt.js';
+import prisma from '../config/prisma.js';
 
 const activeConnections = new Map(); // userId -> Set of socket ids
 const eventRooms = new Map(); // eventId -> Set of user ids
@@ -89,11 +90,24 @@ export function initializeWebSocket(server) {
     /**
      * Send message to event room
      */
-    socket.on('send-message', (data) => {
+    socket.on('send-message', async (data) => {
       const { eventId, message, messageType = 'chat' } = data;
 
       if (!message || message.trim().length === 0) {
         return;
+      }
+
+      // Check if user is blocked from this event
+      try {
+        const blocked = await prisma.eventBlockedUser.findUnique({
+          where: { id_event_id_user: { id_event: eventId, id_user: socket.userId } },
+        });
+        if (blocked) {
+          socket.emit('blocked', { eventId, reason: blocked.reason || 'You are blocked from this event' });
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking blocked user:', err);
       }
 
       const msgData = {

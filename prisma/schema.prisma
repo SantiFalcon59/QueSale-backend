@@ -51,6 +51,8 @@ model User {
   wallCommentLikes        UserWallCommentLike[]
   followers               UserFollower[]      @relation("UserFollowers")
   following               UserFollower[]      @relation("UserFollowing")
+  blockedInEvents         EventBlockedUser[]   @relation("UserBlockedInEvent")
+  blocksInEvents          EventBlockedUser[]   @relation("UserBlocker")
 
   @@map("users")
 }
@@ -185,6 +187,7 @@ model Event {
   latitude       Decimal?     @db.Decimal(10, 8)
   longitude      Decimal?     @db.Decimal(11, 8)
   thumbnail_url  String?      @db.VarChar(255)
+  images         Json?
   status         EventStatus  @default(active)
   featured_level Int          @default(0)
   featured_until DateTime?
@@ -204,6 +207,7 @@ model Event {
   reviews        Review[]
   featuredEvents FeaturedEvent[]
   tags           EventTag[]
+  blockedUsers   EventBlockedUser[]
 
   @@map("events")
 }
@@ -300,6 +304,24 @@ model SavedEvent {
   @@unique([id_user, id_event])
   @@map("saved_events")
 }
+
+model EventBlockedUser {
+  id_blocked_event BigInt   @id @default(autoincrement())
+  id_event         String   @db.VarChar(36)
+  id_user          String   @db.VarChar(36)
+  blocked_by       String   @db.VarChar(36)
+  reason           String?  @db.VarChar(500)
+  created_at       DateTime @default(now())
+
+  event            Event    @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  user             User     @relation("UserBlockedInEvent", fields: [id_user], references: [id_user], onDelete: Cascade)
+  blocker          User     @relation("UserBlocker", fields: [blocked_by], references: [id_user])
+
+  @@unique([id_event, id_user])
+  @@map("event_blocked_users")
+}
+
+
 
 model PostType {
   id_post_type Int    @id @default(autoincrement())

@@ -1,5 +1,6 @@
 import EventService from '../services/EventService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+import { isEventOrganizer, isEventModerator } from '../utils/organizerCheck.js';
 
 /**
  * Event Controller
@@ -121,6 +122,18 @@ export class EventController {
       };
       const result = await EventService.searchEvents(query, req.pagination);
       sendPaginated(res, result.events, req.pagination, 'Search results');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getModeratorStatus(req, res, next) {
+    try {
+      const { eventId } = req.params;
+      const userId = req.user.id;
+      const isOrg = await isEventOrganizer(userId, eventId);
+      const isMod = await isEventModerator(userId, eventId);
+      return sendSuccess(res, { isOrganizer: isOrg, isModerator: isMod });
     } catch (error) {
       next(error);
     }

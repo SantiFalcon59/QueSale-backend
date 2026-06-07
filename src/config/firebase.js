@@ -9,39 +9,63 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const SERVICE_ACCOUNT_FILE = 'quesale-474c5-firebase-adminsdk-fbsvc-8b14575cc2.json';
+
 // Initialize Firebase Admin SDK only if configured
 const initFirebase = () => {
-  // Try to find the service account JSON in multiple locations
-  const possiblePaths = [
-    path.resolve(process.cwd(), 'quesale-474c5-firebase-adminsdk-fbsvc-8b14575cc2.json'),
-    path.resolve(process.cwd(), 'backend', 'quesale-474c5-firebase-adminsdk-fbsvc-8b14575cc2.json'),
-    path.resolve(__dirname, '../..', 'quesale-474c5-firebase-adminsdk-fbsvc-8b14575cc2.json'),
+  const searchPaths = [
+    // From current working directory (backend dir or project root)
+    path.resolve(process.cwd(), SERVICE_ACCOUNT_FILE),
+    path.resolve(process.cwd(), 'backend', SERVICE_ACCOUNT_FILE),
+    // Relative to this config file: src/config/ -> ../../ -> backend/
+    path.resolve(__dirname, '../..', SERVICE_ACCOUNT_FILE),
+    // Relative to server entry: src/ -> ../
+    path.resolve(__dirname, '..', SERVICE_ACCOUNT_FILE),
+    // GOOGLE_APPLICATION_CREDENTIALS env var
+    ...(process.env.GOOGLE_APPLICATION_CREDENTIALS
+      ? [path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS)]
+      : []),
+    // Fallback: walk up directories from cwd
+    ...(() => {
+      const walks = [];
+      let dir = process.cwd();
+      for (let i = 0; i < 4; i++) {
+        walks.push(path.resolve(dir, SERVICE_ACCOUNT_FILE));
+        dir = path.resolve(dir, '..');
+      }
+      return walks;
+    })(),
   ];
 
   let serviceAccount = null;
   let foundPath = null;
 
-  for (const servicePath of possiblePaths) {
+  for (const servicePath of searchPaths) {
     if (fs.existsSync(servicePath)) {
-      serviceAccount = JSON.parse(fs.readFileSync(servicePath, 'utf8'));
-      foundPath = servicePath;
-      break;
+      try {
+        serviceAccount = JSON.parse(fs.readFileSync(servicePath, 'utf8'));
+        foundPath = servicePath;
+        break;
+      } catch (e) {
+        console.warn(`⚠️ Found service account file but JSON parse failed at ${servicePath}: ${e.message}`);
+      }
     }
   }
 
   if (!serviceAccount && process.env.FIREBASE_PROJECT_ID) {
     serviceAccount = {
-      type: process.env.FIREBASE_TYPE,
+      type: process.env.FIREBASE_TYPE || 'service_account',
       project_id: process.env.FIREBASE_PROJECT_ID,
       private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\n/g, '\n'),
+      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       client_email: process.env.FIREBASE_CLIENT_EMAIL,
       client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: process.env.FIREBASE_AUTH_URI,
-      token_uri: process.env.FIREBASE_TOKEN_URI,
-      auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_CERT_URL,
+      auth_uri: process.env.FIREBASE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: process.env.FIREBASE_TOKEN_URI || 'https://oauth2.googleapis.com/token',
+      auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_CERT_URL || 'https://www.googleapis.com/oauth2/v1/certs',
       client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
     };
+    console.log('ℹ️ Using Firebase env vars for service account');
   }
 
   if (serviceAccount?.project_id) {
@@ -50,14 +74,21 @@ const initFirebase = () => {
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
         });
-        console.log('✅ Firebase initialized successfully', foundPath ? `using ${foundPath}` : 'using environment variables');
+        console.log(`✅ Firebase initialized successfully ${foundPath ? `using ${foundPath}` : 'using environment variables'}`);
       }
     } catch (error) {
-      console.warn('⚠️ Firebase initialization skipped:', error.message);
+      console.warn('⚠️ Firebase initialization failed:', error.message);
     }
   } else {
-    console.warn('⚠️ Firebase configuration not found. Skipping Firebase initialization.');
-    console.warn('Expected service account at:', possiblePaths.join('\n  '));
+    console.warn('⚠️ Firebase service account not found. Firebase Auth will be unavailable.');
+    console.warn(`   File searched as "${SERVICE_ACCOUNT_FILE}" in:`);
+    searchPaths.forEach(p => console.warn(`   - ${p}`));
+    if (!process.env.FIREBASE_PROJECT_ID) {
+      console.warn('   Also tried FIREBASE_PROJECT_ID env var but it is not set.');
+      console.warn('   To fix: place the service account JSON in the backend/ directory,');
+      console.warn('   or set env vars: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY');
+      console.warn('   or set GOOGLE_APPLICATION_CREDENTIALS to the full path of the JSON file.');
+    }
   }
 };
 
