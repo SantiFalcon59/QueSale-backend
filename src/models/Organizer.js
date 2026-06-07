@@ -174,13 +174,14 @@ export class OrganizerModel {
   static async getAdmins(organizerId) {
     const admins = await prisma.organizerAdmin.findMany({
       where: { id_organizer: organizerId },
-      include: { user: { select: { username: true, email: true } } },
+      include: { user: { select: { username: true, email: true, profile: { select: { photo_url: true } } } } },
     });
 
     return admins.map(item => ({
       ...item,
       username: item.user?.username || null,
       email: item.user?.email || null,
+      photo_url: item.user?.profile?.photo_url || null,
     }));
   }
 
