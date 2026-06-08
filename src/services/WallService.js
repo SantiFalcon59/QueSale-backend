@@ -1,16 +1,8 @@
 import prisma from '../config/prisma.js';
-import { isEventModerator, canCreateAnnouncement } from '../utils/organizerCheck.js';
 
-/**
- * Event Post Service
- */
-export class EventPostService {
-  static async getPosts(eventId, type = null, pagination) {
-    const where = { id_event: eventId };
-
-    if (type) {
-      where.postType = { name: type.toLowerCase() };
-    }
+export class WallService {
+  static async getPosts(wallType, wallId, pagination) {
+    const where = { wall_type: wallType, wall_id: wallId };
 
     const posts = await prisma.post.findMany({
       where,
@@ -45,28 +37,32 @@ export class EventPostService {
     }));
   }
 
-  static async createPost(eventId, userId, content, type = 'comment') {
+  static async createPost(wallType, wallId, userId, content, type = 'comment', media = null) {
     const typeName = (type || 'comment').toLowerCase();
-
-    if (typeName === 'announcement') {
-      const canAnnounce = await canCreateAnnouncement(userId, eventId);
-      if (!canAnnounce) {
-        throw { statusCode: 403, message: 'Only organizers can create announcements' };
-      }
-    }
 
     let postType = await prisma.postType.findUnique({ where: { name: typeName } });
     if (!postType) {
       postType = await prisma.postType.create({ data: { name: typeName } });
     }
 
+    const data = {
+      wall_type: wallType,
+      wall_id: wallId,
+      content,
+      id_user: userId,
+      id_post_type: postType.id_post_type,
+    };
+
+    if (media) {
+      data.media = media;
+    }
+
+    if (wallType === 'event') {
+      data.id_event = wallId;
+    }
+
     const post = await prisma.post.create({
-      data: {
-        id_event: eventId,
-        id_user: userId,
-        content,
-        id_post_type: postType.id_post_type,
-      },
+      data,
       include: {
         postType: true,
         user: {
@@ -95,8 +91,7 @@ export class EventPostService {
 
     if (!post) return false;
 
-    const isMod = await isEventModerator(userId, post.id_event);
-    if (post.id_user !== userId && !isMod) {
+    if (post.id_user !== userId) {
       throw { statusCode: 403, message: 'Not authorized to delete this post' };
     }
 
@@ -106,24 +101,18 @@ export class EventPostService {
 
   static async createComment(postId, userId, content) {
     return await prisma.comment.create({
-      data: {
-        id_post: postId,
-        id_user: userId,
-        content,
-      },
+      data: { id_post: postId, id_user: userId, content },
     });
   }
 
   static async deleteComment(commentId, userId) {
     const comment = await prisma.comment.findUnique({
       where: { id_comment: commentId },
-      include: { post: { include: { event: true } } },
     });
 
     if (!comment) return false;
 
-    const isMod = await isEventModerator(userId, comment.post.event.id_event);
-    if (comment.id_user !== userId && !isMod) {
+    if (comment.id_user !== userId) {
       throw { statusCode: 403, message: 'Not authorized to delete this comment' };
     }
 
@@ -131,7 +120,7 @@ export class EventPostService {
     return true;
   }
 
-  static async togglePostLike(postId, userId) {
+  static async toggleLike(postId, userId) {
     const existing = await prisma.postLike.findUnique({
       where: { id_post_id_user: { id_post: postId, id_user: userId } },
     });
@@ -156,32 +145,6 @@ export class EventPostService {
       }
     });
   }
-
-  static async toggleCommentLike(commentId, userId) {
-    const existing = await prisma.commentLike.findUnique({
-      where: { id_comment_id_user: { id_comment: commentId, id_user: userId } },
-    });
-
-    return await prisma.$transaction(async (tx) => {
-      if (existing) {
-        await tx.commentLike.delete({
-          where: { id_comment_id_user: { id_comment: commentId, id_user: userId } },
-        });
-        return await tx.comment.update({
-          where: { id_comment: commentId },
-          data: { likes_count: { decrement: 1 } },
-        });
-      } else {
-        await tx.commentLike.create({
-          data: { id_comment: commentId, id_user: userId },
-        });
-        return await tx.comment.update({
-          where: { id_comment: commentId },
-          data: { likes_count: { increment: 1 } },
-        });
-      }
-    });
-  }
 }
 
-export default EventPostService;
+export default WallService;

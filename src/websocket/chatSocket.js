@@ -110,8 +110,27 @@ export function initializeWebSocket(server) {
         console.error('Error checking blocked user:', err);
       }
 
+      // Fetch user display info
+      let displayName = 'Usuario';
+      let photoURL = null;
+      try {
+        const userData = await prisma.user.findUnique({
+          where: { id_user: socket.userId },
+          include: { profile: { select: { photo_url: true } } },
+        });
+        if (userData) {
+          displayName = userData.username || displayName;
+          photoURL = userData.profile?.photo_url || null;
+        }
+      } catch (err) {
+        console.error('Error fetching user info:', err);
+      }
+
       const msgData = {
+        id: `${socket.id}-${Date.now()}`,
         userId: socket.userId,
+        displayName,
+        photoURL,
         message: message.trim(),
         messageType, // 'chat', 'announcement', 'question'
         timestamp: new Date(),

@@ -335,16 +335,19 @@ model PostType {
 model Post {
   id_post      BigInt   @id @default(autoincrement())
   id_post_type Int
+  wall_type    String?  @db.VarChar(20)
+  wall_id      String?  @db.VarChar(36)
   content      String   @db.Text
+  media        Json?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
-  id_event     String   @db.VarChar(36)
+  id_event     String?  @db.VarChar(36)
   id_user      String   @db.VarChar(36)
   likes_count  Int      @default(0)
   is_pinned    Boolean  @default(false)
 
   postType     PostType @relation(fields: [id_post_type], references: [id_post_type])
-  event        Event    @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
+  event        Event?   @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
   user         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   comments     Comment[]
   likes        PostLike[]

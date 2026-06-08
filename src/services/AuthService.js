@@ -2,6 +2,7 @@ import UserModel from '../models/User.js';
 import prisma from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 import { auth } from '../config/firebase.js';
+import { generateToken } from '../utils/jwt.js';
 
 /**
  * Authentication Service
@@ -157,8 +158,11 @@ export class AuthService {
         }
       }
 
+      const token = generateToken({ id: user.id_user, email: user.email });
+
       return {
         user,
+        token,
         message: 'Login successful',
       };
     } catch (error) {
