@@ -35,6 +35,13 @@ export class UserService {
   }
 
   /**
+   * Get organizations where user is admin
+   */
+  static async getAdminOrganizations(userId) {
+    return await UserModel.getAdminOrganizations(userId);
+  }
+
+  /**
    * Update user profile
    */
   static async updateProfile(userId, updateData) {

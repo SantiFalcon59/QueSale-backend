@@ -56,6 +56,7 @@ export class EventService {
       thumbnail_url: eventData.thumbnail_url,
       ticket_type: eventData.ticket_type || 'free',
       ticket_url: eventData.ticket_url,
+      qr_enabled: eventData.qr_enabled,
     });
 
     if (eventData.interestIds) {

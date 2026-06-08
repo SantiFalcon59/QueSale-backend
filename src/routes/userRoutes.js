@@ -14,6 +14,13 @@ const router = express.Router();
 router.get('/profile', authenticateToken, UserController.getProfile);
 
 /**
+ * @route   GET /users/admin-organizations
+ * @desc    Get organizations where user is admin
+ * @access  Private
+ */
+router.get('/admin-organizations', authenticateToken, UserController.getAdminOrganizations);
+
+/**
  * @route   PUT /users/profile
  * @desc    Update user profile
  * @access  Private

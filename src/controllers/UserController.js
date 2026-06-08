@@ -19,6 +19,19 @@ export class UserController {
   }
 
   /**
+   * Get organizations where user is admin
+   */
+  static async getAdminOrganizations(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const organizations = await UserService.getAdminOrganizations(userId);
+      sendSuccess(res, organizations, 'Admin organizations retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Update user profile
    */
   static async updateProfile(req, res, next) {

@@ -8,7 +8,7 @@ export class EventModel {
    * Create new event
    */
   static async create(eventData) {
-    const { id_event, title, description, date, ubication, id_organizer, id_creator, latitude, longitude, price, capacity, thumbnail_url, ticket_type, ticket_url } = eventData;
+    const { id_event, title, description, date, ubication, id_organizer, id_creator, latitude, longitude, price, capacity, thumbnail_url, ticket_type, ticket_url, qr_enabled } = eventData;
     await prisma.event.create({
       data: {
         id_event,
@@ -25,6 +25,7 @@ export class EventModel {
         thumbnail_url: thumbnail_url || null,
         ticket_type: ticket_type || 'free',
         ticket_url: ticket_url || null,
+        qr_enabled: !!qr_enabled,
       },
     });
     return this.findById(id_event);
