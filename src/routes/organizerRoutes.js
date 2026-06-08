@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import OrganizerController from '../controllers/OrganizerController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -53,6 +53,7 @@ router.get('/me', authenticateToken, OrganizerController.getUserOrganizers);
  */
 router.get(
   '/:organizerId',
+  optionalAuthenticateToken,
   [
     param('organizerId')
       .isUUID()

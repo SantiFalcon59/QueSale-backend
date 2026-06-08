@@ -25,7 +25,8 @@ export class OrganizerController {
   static async getOrganizerDetails(req, res, next) {
     try {
       const { organizerId } = req.params;
-      const organizer = await OrganizerService.getOrganizerDetails(organizerId);
+      const currentUserId = req.user?.id || req.user?.userId || null;
+      const organizer = await OrganizerService.getOrganizerDetails(organizerId, currentUserId);
       sendSuccess(res, organizer, 'Organizer retrieved');
     } catch (error) {
       next(error);

@@ -33,13 +33,18 @@ export class OrganizerService {
   /**
    * Get organizer details
    */
-  static async getOrganizerDetails(organizerId) {
+  static async getOrganizerDetails(organizerId, currentUserId = null) {
     const organizer = await OrganizerModel.findById(organizerId);
     if (!organizer) {
       throw { statusCode: 404, message: 'Organizer not found' };
     }
 
-    return organizer;
+    let is_following = false;
+    if (currentUserId) {
+      is_following = await OrganizerModel.isFollowing(organizerId, currentUserId);
+    }
+
+    return { ...organizer, is_following };
   }
 
   /**

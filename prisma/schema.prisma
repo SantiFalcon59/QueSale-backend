@@ -192,6 +192,7 @@ model Event {
   thumbnail_url  String?      @db.VarChar(255)
   images         Json?
   status         EventStatus  @default(active)
+  qr_enabled     Boolean      @default(false)
   featured_level Int          @default(0)
   featured_until DateTime?
   capacity       Int?

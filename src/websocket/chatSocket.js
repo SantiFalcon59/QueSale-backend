@@ -251,6 +251,12 @@ export function initializeWebSocket(server) {
         savedMessage = await prisma.eventChatMessage.create({
           data: createData,
           include: {
+            user: {
+              select: {
+                username: true,
+                profile: { select: { photo_url: true } },
+              },
+            },
             replyToMessage: {
               select: {
                 id_event_chat_message: true,

@@ -51,8 +51,9 @@ export class TicketController {
   static async validateTicket(req, res, next) {
     try {
       const { ticketUuid } = req.params;
-      const result = await TicketService.validateTicket(ticketUuid);
-      sendSuccess(res, result, result.message);
+      const userId = req.user.id_user;
+      const result = await TicketService.validateTicket(ticketUuid, userId);
+      sendSuccess(res, result, 'Ticket validated successfully');
     } catch (error) {
       next(error);
     }
