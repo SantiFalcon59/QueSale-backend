@@ -47,6 +47,8 @@ model User {
   notifications           Notification[]
   postReactions           PostReaction[]
   eventChatMessages       EventChatMessage[]
+  chatMessageReactions    ChatMessageReaction[]
+  pollVotes               PollVote[]
   commentLikes            CommentLike[]
   wallPostLikes           UserWallPostLike[]
   wallCommentLikes        UserWallCommentLike[]
