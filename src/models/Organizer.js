@@ -232,13 +232,21 @@ export class OrganizerModel {
   static async getFollowers(organizerId, limit, offset) {
     const followers = await prisma.organizerFollower.findMany({
       where: { id_organizer: organizerId },
-      include: { user: true },
+      include: {
+        user: {
+          include: { profile: { select: { photo_url: true } } },
+        },
+      },
       orderBy: { created_at: 'desc' },
       take: limit,
       skip: offset,
     });
 
-    return followers.map(item => item.user);
+    return followers.map(item => ({
+      id_user: item.user.id_user,
+      username: item.user.username,
+      photo_url: item.user.profile?.photo_url || null,
+    }));
   }
 
   /**

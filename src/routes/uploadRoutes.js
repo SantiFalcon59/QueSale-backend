@@ -61,15 +61,19 @@ router.post('/organizer-logo', authenticateToken, organizerUpload.single('logo')
   }
 });
 
-router.post('/event-media', authenticateToken, eventUpload.single('media'), async (req, res, next) => {
+router.post('/event-media', authenticateToken, eventUpload.array('media', 10), async (req, res, next) => {
   try {
-    if (!req.file) return sendError(res, 'No file uploaded', 400);
+    const files = req.files;
+    if (!files || files.length === 0) return sendError(res, 'No files uploaded', 400);
     const { eventId } = req.body;
     if (!eventId) return sendError(res, 'eventId is required', 400);
 
-    const mediaUrl = `/uploads/event-media/${req.file.filename}`;
-    await EventModel.update(eventId, { thumbnail_url: mediaUrl });
-    sendSuccess(res, { media_url: mediaUrl }, 'Event media uploaded successfully', 201);
+    const mediaUrls = files.map(f => `/uploads/event-media/${f.filename}`);
+    await EventModel.update(eventId, {
+      thumbnail_url: mediaUrls[0],
+      images: mediaUrls,
+    });
+    sendSuccess(res, { media_urls: mediaUrls }, 'Event media uploaded successfully', 201);
   } catch (error) {
     next(error);
   }
