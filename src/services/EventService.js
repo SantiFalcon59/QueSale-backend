@@ -62,8 +62,10 @@ export class EventService {
       await EventModel.setInterests(eventId, eventData.interestIds);
     }
 
-    if (eventData.tags) {
-      await EventModel.setTags(eventId, eventData.tags);
+    const hashtags = (eventData.description || '').match(/#(\w+)/g)?.map(h => h.slice(1).toLowerCase()) || [];
+    const allTags = [...new Set([...(eventData.tags || []), ...hashtags])];
+    if (allTags.length > 0) {
+      await EventModel.setTags(eventId, allTags);
     }
 
     return event;
@@ -151,8 +153,12 @@ export class EventService {
       await EventModel.setInterests(eventId, updateData.interestIds);
     }
 
-    if (updateData.tags) {
-      await EventModel.setTags(eventId, updateData.tags);
+    const hashtags = (updateData.description || '').match(/#(\w+)/g)?.map(h => h.slice(1).toLowerCase()) || [];
+    const allTags = [...new Set([...(updateData.tags || []), ...hashtags])];
+    if (allTags.length > 0) {
+      await EventModel.setTags(eventId, allTags);
+    } else if (updateData.tags) {
+      await EventModel.setTags(eventId, []);
     }
 
     return updated;

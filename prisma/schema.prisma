@@ -365,7 +365,7 @@ model Post {
   event        Event?   @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
   user         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
   comments     Comment[]
-  likes        PostLike[]
+  reactions    PostReaction[]
 
   @@map("posts")
 }
@@ -386,17 +386,18 @@ model Comment {
   @@map("comments")
 }
 
-model PostLike {
-  id_post_like BigInt   @id @default(autoincrement())
-  id_post      BigInt
-  id_user      String   @db.VarChar(36)
-  created_at   DateTime @default(now())
+model PostReaction {
+  id_post_reaction BigInt   @id @default(autoincrement())
+  id_post          BigInt
+  id_user          String   @db.VarChar(36)
+  type             String   @default("like") @db.VarChar(20)
+  created_at       DateTime @default(now())
 
-  post         Post     @relation(fields: [id_post], references: [id_post], onDelete: Cascade)
-  user         User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  post             Post     @relation(fields: [id_post], references: [id_post], onDelete: Cascade)
+  user             User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
 
   @@unique([id_post, id_user])
-  @@map("post_likes")
+  @@map("post_reactions")
 }
 
 model CommentLike {

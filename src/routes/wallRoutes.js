@@ -28,6 +28,6 @@ router.post(
 
 router.delete('/post/:postId/comments/:commentId', authenticateToken, WallController.deleteComment);
 
-router.post('/post/:postId/like', authenticateToken, WallController.toggleLike);
+router.post('/post/:postId/reaction', authenticateToken, WallController.toggleReaction);
 
 export default router;
