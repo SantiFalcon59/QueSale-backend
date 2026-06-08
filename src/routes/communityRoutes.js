@@ -13,5 +13,6 @@ router.get('/users/:userId/following', CommunityController.getUserFollowing);
 router.get('/users/:userId/is-following', authenticateToken, CommunityController.checkFollowing);
 
 router.get('/recommendations', optionalAuthenticateToken, CommunityController.getRecommendations);
+router.get('/feed', authenticateToken, CommunityController.getSocialFeed);
 
 export default router;

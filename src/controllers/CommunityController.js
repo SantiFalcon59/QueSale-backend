@@ -77,6 +77,15 @@ export class CommunityController {
       next(error);
     }
   }
+  static async getSocialFeed(req, res, next) {
+    try {
+      const { limit, offset } = req.pagination || { limit: 20, offset: 0 };
+      const feed = await CommunityService.getSocialFeed(req.user.id, limit, offset);
+      sendSuccess(res, feed, 'Social feed retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default CommunityController;

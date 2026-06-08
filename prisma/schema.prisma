@@ -45,7 +45,7 @@ model User {
   reviews                 Review[]
   interests               UserInterest[]
   notifications           Notification[]
-  postLikes               PostLike[]
+  postReactions           PostReaction[]
   commentLikes            CommentLike[]
   wallPostLikes           UserWallPostLike[]
   wallCommentLikes        UserWallCommentLike[]

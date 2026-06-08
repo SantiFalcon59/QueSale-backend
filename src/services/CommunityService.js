@@ -65,6 +65,56 @@ export class CommunityService {
 
     return { users, organizers };
   }
+
+  static async getSocialFeed(userId, limit = 20, offset = 0) {
+    const { default: prisma } = await import('../config/prisma.js');
+    try {
+      const posts = await prisma.post.findMany({
+        include: {
+          postType: true,
+          user: {
+            select: {
+              id_user: true,
+              username: true,
+              profile: { select: { photo_url: true } },
+            },
+          },
+          reactions: {
+            select: { id_user: true, type: true },
+          },
+          comments: {
+            include: { user: { select: { id_user: true, username: true } } },
+            orderBy: { created_at: 'asc' },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+        take: limit,
+        skip: offset,
+      });
+
+      return posts.map(post => {
+        const reactionCounts = {};
+        let userReaction = null;
+        for (const r of post.reactions) {
+          reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
+          if (userId && r.id_user === userId) userReaction = r.type;
+        }
+
+        const { reactions: _, ...postData } = post;
+        return {
+          ...postData,
+          type: post.postType?.name || null,
+          author: post.user?.username || 'Anónimo',
+          author_photo_url: post.user?.profile?.photo_url || null,
+          reactions: reactionCounts,
+          user_reaction: userReaction,
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching social feed:', error);
+      return [];
+    }
+  }
 }
 
 export default CommunityService;
