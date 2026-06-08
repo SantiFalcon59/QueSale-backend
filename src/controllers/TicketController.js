@@ -1,5 +1,6 @@
 import TicketService from '../services/TicketService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+import prisma from '../config/prisma.js';
 
 /**
  * Ticket Controller
@@ -10,9 +11,12 @@ export class TicketController {
    */
   static async purchaseTicket(req, res, next) {
     try {
-      const userId = req.user.id;
+      const firebaseUid = req.user.id;
+      const user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid } });
+      if (!user) throw { statusCode: 404, message: 'User not found' };
+
       const { eventId } = req.body;
-      const result = await TicketService.purchaseTicket(eventId, userId);
+      const result = await TicketService.purchaseTicket(eventId, user.id_user);
       sendSuccess(res, result, result.message, 201);
     } catch (error) {
       next(error);
@@ -24,8 +28,11 @@ export class TicketController {
    */
   static async getUserTickets(req, res, next) {
     try {
-      const userId = req.user.id;
-      const result = await TicketService.getUserTickets(userId, req.pagination);
+      const firebaseUid = req.user.id;
+      const user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid } });
+      if (!user) throw { statusCode: 404, message: 'User not found' };
+
+      const result = await TicketService.getUserTickets(user.id_user, req.pagination);
       sendPaginated(res, result.tickets, req.pagination, 'User tickets retrieved');
     } catch (error) {
       next(error);
@@ -51,8 +58,11 @@ export class TicketController {
   static async validateTicket(req, res, next) {
     try {
       const { ticketUuid } = req.params;
-      const userId = req.user.id_user;
-      const result = await TicketService.validateTicket(ticketUuid, userId);
+      const firebaseUid = req.user.id;
+      const user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid } });
+      if (!user) throw { statusCode: 404, message: 'User not found' };
+
+      const result = await TicketService.validateTicket(ticketUuid, user.id_user);
       sendSuccess(res, result, 'Ticket validated successfully');
     } catch (error) {
       next(error);
@@ -77,9 +87,12 @@ export class TicketController {
    */
   static async cancelTicket(req, res, next) {
     try {
-      const userId = req.user.id;
+      const firebaseUid = req.user.id;
+      const user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid } });
+      if (!user) throw { statusCode: 404, message: 'User not found' };
+
       const { ticketId } = req.params;
-      const result = await TicketService.cancelTicket(ticketId, userId);
+      const result = await TicketService.cancelTicket(ticketId, user.id_user);
       sendSuccess(res, result, result.message);
     } catch (error) {
       next(error);
