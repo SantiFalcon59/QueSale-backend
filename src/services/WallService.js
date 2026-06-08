@@ -26,6 +26,12 @@ export class WallService {
           include: { user: { select: { id_user: true, username: true } } },
           orderBy: { created_at: 'asc' },
         },
+        pollOptions: {
+          include: {
+            _count: { select: { votes: true } },
+            votes: currentUserId ? { where: { id_user: currentUserId } } : false,
+          },
+        },
       },
       orderBy: { created_at: 'desc' },
       take: pagination?.limit,
@@ -40,7 +46,19 @@ export class WallService {
         if (currentUserId && r.id_user === currentUserId) userReaction = r.type;
       }
 
-      const { reactions: _, ...postData } = post;
+      const { reactions: _, pollOptions: rawOptions, ...postData } = post;
+      let totalPollVotes = 0;
+      let userVote = null;
+      const pollOptions = rawOptions?.map(o => {
+        totalPollVotes += o._count.votes;
+        if (o.votes?.length > 0) userVote = o.id_poll_option;
+        return {
+          id: o.id_poll_option,
+          text: o.option_text,
+          votes: o._count.votes,
+        };
+      });
+
       return {
         ...postData,
         type: post.postType?.name || null,
@@ -48,6 +66,9 @@ export class WallService {
         author_photo_url: post.user?.profile?.photo_url || null,
         reactions: reactionCounts,
         user_reaction: userReaction,
+        pollOptions: pollOptions?.length > 0 ? pollOptions : undefined,
+        totalPollVotes,
+        userVote,
         comments: post.comments.map(c => ({
           ...c,
           author: c.user?.username || 'Anónimo',
@@ -56,7 +77,7 @@ export class WallService {
     });
   }
 
-  static async createPost(wallType, wallId, userId, content, type = 'comment', media = null) {
+  static async createPost(wallType, wallId, userId, content, type = 'comment', media = null, pollOptions = null) {
     const typeName = (type || 'comment').toLowerCase();
 
     let postType = await prisma.postType.findUnique({ where: { name: typeName } });
@@ -94,7 +115,16 @@ export class WallService {
       },
     });
 
-    return {
+    if (typeName === 'poll' && pollOptions && pollOptions.length >= 2) {
+      await prisma.pollOption.createMany({
+        data: pollOptions.map((text) => ({
+          id_post: post.id_post,
+          option_text: text,
+        })),
+      });
+    }
+
+    const result = {
       ...post,
       type: post.postType?.name || null,
       author: post.user?.username || 'Anónimo',
@@ -102,6 +132,22 @@ export class WallService {
       reactions: {},
       user_reaction: null,
     };
+
+    if (typeName === 'poll') {
+      const options = await prisma.pollOption.findMany({
+        where: { id_post: post.id_post },
+        include: { _count: { select: { votes: true } } },
+      });
+      result.pollOptions = options.map(o => ({
+        id: o.id_poll_option,
+        text: o.option_text,
+        votes: o._count.votes,
+      }));
+      result.totalPollVotes = 0;
+      result.userVote = null;
+    }
+
+    return result;
   }
 
   static async deletePost(postId, userId) {
@@ -174,6 +220,38 @@ export class WallService {
           data: { likes_count: { increment: 1 } },
         });
       }
+    });
+  }
+
+  static async votePoll(optionId, userId) {
+    const option = await prisma.pollOption.findUnique({
+      where: { id_poll_option: optionId },
+      select: { id_post: true, id_poll_option: true },
+    });
+    if (!option) throw { statusCode: 404, message: 'Opción no encontrada' };
+
+    const existingVotes = await prisma.pollVote.findMany({
+      where: {
+        poll_option: { id_post: option.id_post },
+        id_user: userId,
+      },
+    });
+
+    return await prisma.$transaction(async (tx) => {
+      if (existingVotes.length > 0) {
+        const sameVote = existingVotes.find(v => v.id_poll_option === optionId);
+        if (sameVote) {
+          await tx.pollVote.delete({ where: { id_poll_vote: sameVote.id_poll_vote } });
+          return { action: 'removed', optionId };
+        }
+        await tx.pollVote.deleteMany({
+          where: { id_poll_option: { in: existingVotes.map(v => v.id_poll_option) }, id_user: userId },
+        });
+      }
+      await tx.pollVote.create({
+        data: { id_poll_option: optionId, id_user: userId },
+      });
+      return { action: 'voted', optionId };
     });
   }
 

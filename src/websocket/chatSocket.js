@@ -7,6 +7,27 @@ const eventRooms = new Map(); // eventId -> Set of user ids
 
 const MESSAGES_PER_PAGE = 20;
 
+function formatMessage(msg) {
+  const formatted = {
+    id: `db-${msg.id_event_chat_message}`,
+    userId: msg.id_user,
+    displayName: msg.user?.username || 'Usuario',
+    photoURL: msg.user?.profile?.photo_url || null,
+    message: msg.message,
+    messageType: msg.message_type,
+    timestamp: msg.created_at,
+  };
+  if (msg.replyToMessage) {
+    formatted.replyTo = {
+      id: `db-${msg.replyToMessage.id_event_chat_message}`,
+      userId: msg.replyToMessage.id_user,
+      displayName: msg.replyToMessage.user?.username || 'Usuario',
+      message: msg.replyToMessage.message,
+    };
+  }
+  return formatted;
+}
+
 /**
  * Initialize Socket.io
  */
@@ -77,18 +98,18 @@ export function initializeWebSocket(server) {
                 profile: { select: { photo_url: true } },
               },
             },
+            replyToMessage: {
+              select: {
+                id_event_chat_message: true,
+                message: true,
+                id_user: true,
+                user: { select: { username: true } },
+              },
+            },
           },
         });
 
-        const history = messages.reverse().map(msg => ({
-          id: `db-${msg.id_event_chat_message}`,
-          userId: msg.id_user,
-          displayName: msg.user?.username || 'Usuario',
-          photoURL: msg.user?.profile?.photo_url || null,
-          message: msg.message,
-          messageType: msg.message_type,
-          timestamp: msg.created_at,
-        }));
+        const history = messages.reverse().map(msg => formatMessage(msg));
 
         socket.emit('chat-history', history);
       } catch (err) {
@@ -117,18 +138,18 @@ export function initializeWebSocket(server) {
                 profile: { select: { photo_url: true } },
               },
             },
+            replyToMessage: {
+              select: {
+                id_event_chat_message: true,
+                message: true,
+                id_user: true,
+                user: { select: { username: true } },
+              },
+            },
           },
         });
 
-        const older = messages.reverse().map(msg => ({
-          id: `db-${msg.id_event_chat_message}`,
-          userId: msg.id_user,
-          displayName: msg.user?.username || 'Usuario',
-          photoURL: msg.user?.profile?.photo_url || null,
-          message: msg.message,
-          messageType: msg.message_type,
-          timestamp: msg.created_at,
-        }));
+        const older = messages.reverse().map(msg => formatMessage(msg));
 
         socket.emit('older-messages', older);
       } catch (err) {
@@ -164,7 +185,7 @@ export function initializeWebSocket(server) {
      * Send message to event room
      */
     socket.on('send-message', async (data) => {
-      const { eventId, message, messageType = 'chat' } = data;
+      const { eventId, message, messageType = 'chat', replyTo } = data;
 
       if (!message || message.trim().length === 0) {
         return;
@@ -202,26 +223,41 @@ export function initializeWebSocket(server) {
       // Save to DB
       let savedMessage = null;
       try {
+        const createData = {
+          id_event: eventId,
+          id_user: socket.userId,
+          message: message.trim(),
+          message_type: messageType,
+        };
+        if (replyTo?.id) {
+          const replyDbId = replyTo.id.replace('db-', '');
+          createData.reply_to = BigInt(replyDbId);
+        }
         savedMessage = await prisma.eventChatMessage.create({
-          data: {
-            id_event: eventId,
-            id_user: socket.userId,
-            message: message.trim(),
-            message_type: messageType,
+          data: createData,
+          include: {
+            replyToMessage: {
+              select: {
+                id_event_chat_message: true,
+                message: true,
+                id_user: true,
+                user: { select: { username: true } },
+              },
+            },
           },
         });
       } catch (err) {
         console.error('Error saving message to DB:', err);
       }
 
-      const msgData = {
-        id: savedMessage ? `db-${savedMessage.id_event_chat_message}` : `${socket.id}-${Date.now()}`,
+      const msgData = savedMessage ? formatMessage(savedMessage) : {
+        id: `${socket.id}-${Date.now()}`,
         userId: socket.userId,
         displayName,
         photoURL,
         message: message.trim(),
         messageType,
-        timestamp: savedMessage?.created_at || new Date(),
+        timestamp: new Date(),
         socketId: socket.id,
       };
 

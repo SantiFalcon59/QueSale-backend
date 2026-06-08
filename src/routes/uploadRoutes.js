@@ -31,8 +31,8 @@ const fileFilter = (req, file, cb) => {
   else cb(new Error('Only image files are allowed'));
 };
 
-const profileUpload = multer({ storage: createStorage(profileDir), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
-const organizerUpload = multer({ storage: createStorage(organizerDir), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
+const profileUpload = multer({ storage: createStorage(profileDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
+const organizerUpload = multer({ storage: createStorage(organizerDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
 const eventUpload = multer({ storage: createStorage(eventDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
 const postMediaUpload = multer({ storage: createStorage(postMediaDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
 

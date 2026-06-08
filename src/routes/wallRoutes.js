@@ -30,4 +30,6 @@ router.delete('/post/:postId/comments/:commentId', authenticateToken, WallContro
 
 router.post('/post/:postId/reaction', authenticateToken, WallController.toggleReaction);
 
+router.post('/post/:postId/vote', authenticateToken, WallController.votePoll);
+
 export default router;

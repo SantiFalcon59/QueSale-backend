@@ -18,9 +18,23 @@ export class WallController {
     try {
       const { wallType, wallId } = req.params;
       const userId = req.user.id;
-      const { content, type, media } = req.body;
-      const post = await WallService.createPost(wallType, wallId, userId, content, type, media);
+      const { content, type, media, pollOptions } = req.body;
+      const post = await WallService.createPost(wallType, wallId, userId, content, type, media, pollOptions);
       sendSuccess(res, post, 'Post created', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async votePoll(req, res, next) {
+    try {
+      const { postId } = req.params;
+      const userId = req.user.id;
+      const { optionId } = req.body;
+      if (!optionId) return sendError(res, 'optionId es requerido', 400);
+      const result = await WallService.votePoll(parseInt(optionId), userId);
+      const updatedPost = await WallService.getPosts('event', req.body.wallId || '', { limit: 1, offset: 0 }, null, userId);
+      sendSuccess(res, { result, post: updatedPost[0] }, 'Voto registrado');
     } catch (error) {
       next(error);
     }

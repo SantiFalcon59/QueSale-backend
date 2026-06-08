@@ -119,6 +119,7 @@ export class EventController {
         location: req.query.location,
         dateFrom: req.query.dateFrom,
         dateTo: req.query.dateTo,
+        search: req.query.search || req.query.q,
       };
       const result = await EventService.searchEvents(query, req.pagination);
       sendPaginated(res, result.events, req.pagination, 'Search results');
