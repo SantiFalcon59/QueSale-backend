@@ -5,6 +5,8 @@ import prisma from '../config/prisma.js';
 const activeConnections = new Map(); // userId -> Set of socket ids
 const eventRooms = new Map(); // eventId -> Set of user ids
 
+const MESSAGES_PER_PAGE = 20;
+
 /**
  * Initialize Socket.io
  */
@@ -47,7 +49,7 @@ export function initializeWebSocket(server) {
     /**
      * Join event chat room
      */
-    socket.on('join-event', (eventId) => {
+    socket.on('join-event', async (eventId) => {
       socket.join(`event-${eventId}`);
 
       if (!eventRooms.has(eventId)) {
@@ -61,6 +63,77 @@ export function initializeWebSocket(server) {
         totalUsers: eventRooms.get(eventId).size,
         timestamp: new Date(),
       });
+
+      // Load recent messages from DB
+      try {
+        const messages = await prisma.eventChatMessage.findMany({
+          where: { id_event: eventId },
+          orderBy: { created_at: 'desc' },
+          take: MESSAGES_PER_PAGE,
+          include: {
+            user: {
+              select: {
+                username: true,
+                profile: { select: { photo_url: true } },
+              },
+            },
+          },
+        });
+
+        const history = messages.reverse().map(msg => ({
+          id: `db-${msg.id_event_chat_message}`,
+          userId: msg.id_user,
+          displayName: msg.user?.username || 'Usuario',
+          photoURL: msg.user?.profile?.photo_url || null,
+          message: msg.message,
+          messageType: msg.message_type,
+          timestamp: msg.created_at,
+        }));
+
+        socket.emit('chat-history', history);
+      } catch (err) {
+        console.error('Error loading chat history:', err);
+        socket.emit('chat-history', []);
+      }
+    });
+
+    /**
+     * Load older messages (pagination)
+     */
+    socket.on('load-messages', async (data) => {
+      const { eventId, before } = data;
+      try {
+        const messages = await prisma.eventChatMessage.findMany({
+          where: {
+            id_event: eventId,
+            created_at: { lt: new Date(before) },
+          },
+          orderBy: { created_at: 'desc' },
+          take: MESSAGES_PER_PAGE,
+          include: {
+            user: {
+              select: {
+                username: true,
+                profile: { select: { photo_url: true } },
+              },
+            },
+          },
+        });
+
+        const older = messages.reverse().map(msg => ({
+          id: `db-${msg.id_event_chat_message}`,
+          userId: msg.id_user,
+          displayName: msg.user?.username || 'Usuario',
+          photoURL: msg.user?.profile?.photo_url || null,
+          message: msg.message,
+          messageType: msg.message_type,
+          timestamp: msg.created_at,
+        }));
+
+        socket.emit('older-messages', older);
+      } catch (err) {
+        console.error('Error loading older messages:', err);
+      }
     });
 
     /**
@@ -126,14 +199,29 @@ export function initializeWebSocket(server) {
         console.error('Error fetching user info:', err);
       }
 
+      // Save to DB
+      let savedMessage = null;
+      try {
+        savedMessage = await prisma.eventChatMessage.create({
+          data: {
+            id_event: eventId,
+            id_user: socket.userId,
+            message: message.trim(),
+            message_type: messageType,
+          },
+        });
+      } catch (err) {
+        console.error('Error saving message to DB:', err);
+      }
+
       const msgData = {
-        id: `${socket.id}-${Date.now()}`,
+        id: savedMessage ? `db-${savedMessage.id_event_chat_message}` : `${socket.id}-${Date.now()}`,
         userId: socket.userId,
         displayName,
         photoURL,
         message: message.trim(),
-        messageType, // 'chat', 'announcement', 'question'
-        timestamp: new Date(),
+        messageType,
+        timestamp: savedMessage?.created_at || new Date(),
         socketId: socket.id,
       };
 

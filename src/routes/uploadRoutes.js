@@ -13,7 +13,8 @@ const router = express.Router();
 const profileDir = path.join(process.cwd(), 'uploads', 'profile-photos');
 const organizerDir = path.join(process.cwd(), 'uploads', 'organizer-logos');
 const eventDir = path.join(process.cwd(), 'uploads', 'event-media');
-[profileDir, organizerDir, eventDir].forEach(dir => {
+const postMediaDir = path.join(process.cwd(), 'uploads', 'post-media');
+[profileDir, organizerDir, eventDir, postMediaDir].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -33,6 +34,7 @@ const fileFilter = (req, file, cb) => {
 const profileUpload = multer({ storage: createStorage(profileDir), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
 const organizerUpload = multer({ storage: createStorage(organizerDir), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
 const eventUpload = multer({ storage: createStorage(eventDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
+const postMediaUpload = multer({ storage: createStorage(postMediaDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
 
 router.post('/', authenticateToken, profileUpload.single('photo'), async (req, res, next) => {
   try {
@@ -68,6 +70,16 @@ router.post('/event-media', authenticateToken, eventUpload.single('media'), asyn
     const mediaUrl = `/uploads/event-media/${req.file.filename}`;
     await EventModel.update(eventId, { thumbnail_url: mediaUrl });
     sendSuccess(res, { media_url: mediaUrl }, 'Event media uploaded successfully', 201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/post-media', authenticateToken, postMediaUpload.single('image'), async (req, res, next) => {
+  try {
+    if (!req.file) return sendError(res, 'No file uploaded', 400);
+    const mediaUrl = `/uploads/post-media/${req.file.filename}`;
+    sendSuccess(res, { media_url: mediaUrl }, 'Post media uploaded successfully', 201);
   } catch (error) {
     next(error);
   }
