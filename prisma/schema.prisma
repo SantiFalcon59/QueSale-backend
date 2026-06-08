@@ -46,6 +46,7 @@ model User {
   interests               UserInterest[]
   notifications           Notification[]
   postReactions           PostReaction[]
+  eventChatMessages       EventChatMessage[]
   commentLikes            CommentLike[]
   wallPostLikes           UserWallPostLike[]
   wallCommentLikes        UserWallCommentLike[]
@@ -208,6 +209,7 @@ model Event {
   featuredEvents FeaturedEvent[]
   tags           EventTag[]
   blockedUsers   EventBlockedUser[]
+  eventChatMessages EventChatMessage[]
 
   @@map("events")
 }
