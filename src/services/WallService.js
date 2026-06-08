@@ -108,11 +108,13 @@ export class WallService {
   static async deleteComment(commentId, userId) {
     const comment = await prisma.comment.findUnique({
       where: { id_comment: commentId },
+      include: { post: { select: { id_user: true } } },
     });
 
     if (!comment) return false;
 
-    if (comment.id_user !== userId) {
+    const isPostOwner = comment.post?.id_user === userId;
+    if (comment.id_user !== userId && !isPostOwner) {
       throw { statusCode: 403, message: 'Not authorized to delete this comment' };
     }
 
