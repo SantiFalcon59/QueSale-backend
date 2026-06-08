@@ -26,17 +26,41 @@ export class WallService {
           include: { user: { select: { id_user: true, username: true } } },
           orderBy: { created_at: 'asc' },
         },
-        pollOptions: {
-          include: {
-            _count: { select: { votes: true } },
-            votes: currentUserId ? { where: { id_user: currentUserId } } : false,
-          },
-        },
       },
       orderBy: { created_at: 'desc' },
       take: pagination?.limit,
       skip: pagination?.offset,
     });
+
+    const pollPostIds = posts.filter(p => p.postType?.name === 'poll').map(p => p.id_post);
+    let pollDataMap = {};
+    if (pollPostIds.length > 0) {
+      try {
+        const pollOptions = await prisma.pollOption.findMany({
+          where: { id_post: { in: pollPostIds } },
+          include: {
+            _count: { select: { votes: true } },
+            votes: currentUserId ? { where: { id_user: currentUserId }, select: { id_user: true } } : false,
+          },
+        });
+        for (const opt of pollOptions) {
+          if (!pollDataMap[opt.id_post]) {
+            pollDataMap[opt.id_post] = { options: [], totalVotes: 0, userVote: null };
+          }
+          pollDataMap[opt.id_post].options.push({
+            id: opt.id_poll_option,
+            text: opt.option_text,
+            votes: opt._count.votes,
+          });
+          pollDataMap[opt.id_post].totalVotes += opt._count.votes;
+          if (opt.votes?.length > 0) {
+            pollDataMap[opt.id_post].userVote = opt.id_poll_option;
+          }
+        }
+      } catch {
+        pollDataMap = {};
+      }
+    }
 
     return posts.map(post => {
       const reactionCounts = {};
@@ -46,18 +70,8 @@ export class WallService {
         if (currentUserId && r.id_user === currentUserId) userReaction = r.type;
       }
 
-      const { reactions: _, pollOptions: rawOptions, ...postData } = post;
-      let totalPollVotes = 0;
-      let userVote = null;
-      const pollOptions = rawOptions?.map(o => {
-        totalPollVotes += o._count.votes;
-        if (o.votes?.length > 0) userVote = o.id_poll_option;
-        return {
-          id: o.id_poll_option,
-          text: o.option_text,
-          votes: o._count.votes,
-        };
-      });
+      const { reactions: _, ...postData } = post;
+      const pollInfo = pollDataMap[post.id_post];
 
       return {
         ...postData,
@@ -66,9 +80,9 @@ export class WallService {
         author_photo_url: post.user?.profile?.photo_url || null,
         reactions: reactionCounts,
         user_reaction: userReaction,
-        pollOptions: pollOptions?.length > 0 ? pollOptions : undefined,
-        totalPollVotes,
-        userVote,
+        pollOptions: pollInfo?.options?.length > 0 ? pollInfo.options : undefined,
+        totalPollVotes: pollInfo?.totalVotes || 0,
+        userVote: pollInfo?.userVote || null,
         comments: post.comments.map(c => ({
           ...c,
           author: c.user?.username || 'Anónimo',

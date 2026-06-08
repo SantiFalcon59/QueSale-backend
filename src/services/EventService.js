@@ -178,6 +178,17 @@ export class EventService {
     return { message: 'Event deleted successfully' };
   }
 
+  static async searchTags(q) {
+    const { default: prisma } = await import('../config/prisma.js');
+    const tags = await prisma.eventTag.findMany({
+      where: { tag: { contains: q.toLowerCase() } },
+      select: { tag: true },
+      distinct: ['tag'],
+      take: 20,
+    });
+    return [...new Set(tags.map(t => t.tag))];
+  }
+
   static async searchEvents(query, pagination) {
     const filters = {
       category: query.category,

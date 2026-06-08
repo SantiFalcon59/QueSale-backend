@@ -128,6 +128,16 @@ export class EventController {
     }
   }
 
+  static async searchTags(req, res, next) {
+    try {
+      const q = req.query.q || '';
+      const tags = await EventService.searchTags(q);
+      sendSuccess(res, tags, 'Tags retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getModeratorStatus(req, res, next) {
     try {
       const { eventId } = req.params;

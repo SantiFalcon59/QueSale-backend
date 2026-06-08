@@ -288,11 +288,26 @@ model EventChatMessage {
 
   event            Event             @relation(fields: [id_event], references: [id_event], onDelete: Cascade)
   user             User              @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
-  replyToMessage   EventChatMessage? @relation("ChatMessageReplies", fields: [reply_to], references: [id_event_chat_message])
-  replies          EventChatMessage[] @relation("ChatMessageReplies")
+  replyToMessage   EventChatMessage?   @relation("ChatMessageReplies", fields: [reply_to], references: [id_event_chat_message])
+  replies          EventChatMessage[]  @relation("ChatMessageReplies")
+  messageReactions ChatMessageReaction[]
 
   @@index([id_event, created_at])
   @@map("event_chat_messages")
+}
+
+model ChatMessageReaction {
+  id_chat_message_reaction BigInt  @id @default(autoincrement())
+  id_message               BigInt
+  id_user                  String  @db.VarChar(36)
+  emoji                    String  @db.VarChar(30)
+  created_at               DateTime @default(now())
+
+  message                  EventChatMessage @relation(fields: [id_message], references: [id_event_chat_message], onDelete: Cascade)
+  user                     User             @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@unique([id_message, id_user, emoji])
+  @@map("chat_message_reactions")
 }
 
 model Ticket {

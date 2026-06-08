@@ -7,7 +7,7 @@ const eventRooms = new Map(); // eventId -> Set of user ids
 
 const MESSAGES_PER_PAGE = 20;
 
-function formatMessage(msg) {
+function formatMessage(msg, currentUserId = null) {
   const formatted = {
     id: `db-${msg.id_event_chat_message}`,
     userId: msg.id_user,
@@ -24,6 +24,15 @@ function formatMessage(msg) {
       displayName: msg.replyToMessage.user?.username || 'Usuario',
       message: msg.replyToMessage.message,
     };
+  }
+  if (msg.messageReactions) {
+    const counts = {};
+    for (const r of msg.messageReactions) {
+      if (!counts[r.emoji]) counts[r.emoji] = { count: 0, reacted: false };
+      counts[r.emoji].count++;
+      if (currentUserId && r.id_user === currentUserId) counts[r.emoji].reacted = true;
+    }
+    formatted.reactions = counts;
   }
   return formatted;
 }
@@ -106,10 +115,13 @@ export function initializeWebSocket(server) {
                 user: { select: { username: true } },
               },
             },
+            messageReactions: {
+              select: { emoji: true, id_user: true },
+            },
           },
         });
 
-        const history = messages.reverse().map(msg => formatMessage(msg));
+        const history = messages.reverse().map(msg => formatMessage(msg, socket.userId));
 
         socket.emit('chat-history', history);
       } catch (err) {
@@ -146,10 +158,13 @@ export function initializeWebSocket(server) {
                 user: { select: { username: true } },
               },
             },
+            messageReactions: {
+              select: { emoji: true, id_user: true },
+            },
           },
         });
 
-        const older = messages.reverse().map(msg => formatMessage(msg));
+        const older = messages.reverse().map(msg => formatMessage(msg, socket.userId));
 
         socket.emit('older-messages', older);
       } catch (err) {
@@ -244,13 +259,16 @@ export function initializeWebSocket(server) {
                 user: { select: { username: true } },
               },
             },
+            messageReactions: {
+              select: { emoji: true, id_user: true },
+            },
           },
         });
       } catch (err) {
         console.error('Error saving message to DB:', err);
       }
 
-      const msgData = savedMessage ? formatMessage(savedMessage) : {
+      const msgData = savedMessage ? formatMessage(savedMessage, socket.userId) : {
         id: `${socket.id}-${Date.now()}`,
         userId: socket.userId,
         displayName,
@@ -265,6 +283,60 @@ export function initializeWebSocket(server) {
       io.to(`event-${eventId}`).emit('new-message', msgData);
 
       console.log(`Message in event ${eventId} from ${socket.userId}:`, msgData);
+    });
+
+    /**
+     * React to a message
+     */
+    socket.on('react-to-message', async (data) => {
+      const { eventId, messageId, emoji } = data;
+      if (!messageId || !emoji) return;
+
+      const dbId = parseInt(messageId.replace('db-', ''));
+      if (!dbId) return;
+
+      try {
+        const existing = await prisma.chatMessageReaction.findUnique({
+          where: {
+            id_message_id_user_emoji: {
+              id_message: dbId,
+              id_user: socket.userId,
+              emoji,
+            },
+          },
+        });
+
+        if (existing) {
+          await prisma.chatMessageReaction.delete({
+            where: { id_chat_message_reaction: existing.id_chat_message_reaction },
+          });
+        } else {
+          await prisma.chatMessageReaction.create({
+            data: {
+              id_message: dbId,
+              id_user: socket.userId,
+              emoji,
+            },
+          });
+        }
+
+        const msg = await prisma.eventChatMessage.findUnique({
+          where: { id_event_chat_message: dbId },
+          include: {
+            user: { select: { username: true, profile: { select: { photo_url: true } } } },
+            replyToMessage: {
+              select: { id_event_chat_message: true, message: true, id_user: true, user: { select: { username: true } } },
+            },
+            messageReactions: { select: { emoji: true, id_user: true } },
+          },
+        });
+
+        if (msg) {
+          io.to(`event-${eventId}`).emit('message-reactions-updated', formatMessage(msg, socket.userId));
+        }
+      } catch (err) {
+        console.error('Error toggling reaction:', err);
+      }
     });
 
     /**

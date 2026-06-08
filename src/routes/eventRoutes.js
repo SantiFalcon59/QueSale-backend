@@ -191,6 +191,13 @@ router.post(
 router.delete('/:eventId/block/:userId', authenticateToken, ModeratorController.unblockUser);
 
 /**
+ * @route   GET /events/tags/search
+ * @desc    Search event tags
+ * @access  Public
+ */
+router.get('/tags/search', EventController.searchTags);
+
+/**
  * @route   GET /events/:eventId/blocked-users
  * @desc    List blocked users for an event
  * @access  Private (organizer/moderator)
