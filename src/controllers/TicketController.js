@@ -98,6 +98,64 @@ export class TicketController {
       next(error);
     }
   }
+
+  /**
+   * Mercado Pago Webhook
+   */
+  static async mercadopagoWebhook(req, res, next) {
+    try {
+      const { type, data } = req.body;
+      const orgId = req.query.orgId;
+
+      if (type === 'payment' && data && data.id && orgId) {
+        const paymentId = data.id;
+        console.log(`[WEBHOOK] Mercado Pago payment received: ${paymentId} for org: ${orgId}`);
+        
+        try {
+          // Import required modules
+          const OrganizerModel = (await import('../models/Organizer.js')).default;
+          const TicketModel = (await import('../models/Ticket.js')).default;
+          const MercadoPagoService = (await import('../services/MercadoPagoService.js')).default;
+          const { generateId, generateTicketCode, generateQRCode } = await import('../utils/generators.js');
+
+          const organizer = await OrganizerModel.findById(orgId);
+          if (organizer && organizer.mp_access_token) {
+            const payment = await MercadoPagoService.verifyPayment(paymentId, organizer.mp_access_token);
+            
+            if (payment.status === 'approved') {
+              const externalReference = JSON.parse(payment.external_reference);
+              if (externalReference.type === 'ticket_purchase') {
+                const { eventId, userId } = externalReference;
+                
+                // Check if ticket already exists
+                const hasTicket = await TicketModel.hasTicket(userId, eventId);
+                if (!hasTicket) {
+                  const ticketId = generateId();
+                  const uuid = generateTicketCode();
+
+                  await TicketModel.create({
+                    id_ticket: ticketId,
+                    uuid,
+                    id_event: eventId,
+                    id_user: userId,
+                    state: 1, // Active
+                    buy_date: new Date(),
+                  });
+                  console.log(`[WEBHOOK] Ticket created for user ${userId} in event ${eventId}`);
+                }
+              }
+            }
+          }
+        } catch (innerError) {
+          console.error('[WEBHOOK ERROR]', innerError);
+        }
+      }
+
+      sendSuccess(res, null, 'Webhook received');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default TicketController;

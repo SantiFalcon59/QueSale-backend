@@ -166,6 +166,9 @@ model Organizer {
   id_creator   String   @db.VarChar(36)
   logo_url     String?  @db.VarChar(255)
   verified     Boolean  @default(false)
+  mp_public_key      String?         @db.VarChar(255)
+  mp_access_token    String?         @db.VarChar(255)
+  mp_refresh_token   String?         @db.VarChar(255)
   rating       Decimal? @db.Decimal(3, 2)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt

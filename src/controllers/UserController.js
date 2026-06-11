@@ -1,16 +1,26 @@
 import UserService from '../services/UserService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+import prisma from '../config/prisma.js';
 
 /**
  * User Controller
  */
 export class UserController {
   /**
+   * Helper to get internal DB id from Firebase UID
+   */
+  static async getInternalId(firebaseUid) {
+    const user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid } });
+    if (!user) throw { statusCode: 404, message: 'User not found in database' };
+    return user.id_user;
+  }
+
+  /**
    * Get user profile
    */
   static async getProfile(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const user = await UserService.getUserProfile(userId);
       sendSuccess(res, user, 'Profile retrieved successfully');
     } catch (error) {
@@ -23,7 +33,7 @@ export class UserController {
    */
   static async getAdminOrganizations(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const organizations = await UserService.getAdminOrganizations(userId);
       sendSuccess(res, organizations, 'Admin organizations retrieved successfully');
     } catch (error) {
@@ -36,7 +46,7 @@ export class UserController {
    */
   static async updateProfile(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const { username, email, description, photo_url } = req.body;
       const user = await UserService.updateProfile(userId, { username, email, description, photo_url });
       sendSuccess(res, user, 'Profile updated successfully');
@@ -50,7 +60,7 @@ export class UserController {
    */
   static async setInterests(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const { interestIds } = req.body;
       const interests = await UserService.setInterests(userId, interestIds);
       sendSuccess(res, interests, 'Interests updated successfully');
@@ -64,7 +74,7 @@ export class UserController {
    */
   static async getSavedEvents(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const result = await UserService.getSavedEvents(userId, req.pagination);
       sendPaginated(res, result.events, req.pagination, 'Saved events retrieved');
     } catch (error) {
@@ -77,7 +87,7 @@ export class UserController {
    */
   static async saveEvent(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const { eventId } = req.params;
       await UserService.saveEvent(userId, eventId);
       sendSuccess(res, null, 'Event saved successfully');
@@ -91,7 +101,7 @@ export class UserController {
    */
   static async unsaveEvent(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = await UserController.getInternalId(req.user.id);
       const { eventId } = req.params;
       await UserService.unsaveEvent(userId, eventId);
       sendSuccess(res, null, 'Event unsaved successfully');

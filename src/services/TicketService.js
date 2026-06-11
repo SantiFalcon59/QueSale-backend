@@ -1,6 +1,8 @@
 import TicketModel from '../models/Ticket.js';
 import EventModel from '../models/Event.js';
 import OrganizerModel from '../models/Organizer.js';
+import UserModel from '../models/User.js';
+import MercadoPagoService from './MercadoPagoService.js';
 import { generateId, generateTicketCode, generateQRCode } from '../utils/generators.js';
 
 /**
@@ -17,25 +19,35 @@ export class TicketService {
       throw { statusCode: 404, message: 'Event not found' };
     }
 
-    // Check if QR is enabled (only if we are using this system for QR)
-    // The user said: "Un evento puede tomar la decision de tener entregas por QR"
-    if (!event.qr_enabled) {
-      // If QR is not enabled, maybe they use an external ticket_url
-      if (event.ticket_url) {
-        return { ticket_url: event.ticket_url, message: 'Please use external ticket URL' };
-      }
-      // If it's a free event without QR enabled, what happens? 
-      // Let's assume for now that if they want a ticket in our system, they should have QR enabled
-      // or we just allow it but it won't be "QR delivery".
-    }
-
     // Check if user already has ticket
     const hasTicket = await TicketModel.hasTicket(userId, eventId);
     if (hasTicket) {
-      throw { statusCode: 409, message: 'User already has a ticket for this event' };
+      throw { statusCode: 409, message: 'Ya tienes una entrada para este evento' };
     }
 
-    // Create ticket
+    // If it's a paid event using MercadoPago integration
+    if (event.ticket_type === 'mercadopago' && event.price && Number(event.price) > 0) {
+      // Get organizer to check for MP credentials
+      const organizer = await OrganizerModel.findById(event.id_organizer);
+      if (organizer?.mp_access_token) {
+        const user = await UserModel.findById(userId);
+        const preference = await MercadoPagoService.createTicketPreference(event, user, organizer);
+        return {
+          payment_required: true,
+          preference_id: preference.id,
+          init_point: preference.init_point,
+          message: 'Pago requerido',
+        };
+      } else {
+        throw { statusCode: 400, message: 'El organizador no tiene configurado Mercado Pago correctamente' };
+      }
+    }
+    
+    if (event.ticket_type === 'mercadopago') {
+       throw { statusCode: 400, message: 'El precio del evento debe ser mayor a 0 para usar Mercado Pago' };
+    }
+
+    // Create ticket (for free events or paid events where organizer doesn't have MP set up yet)
     const ticketId = generateId();
     const uuid = generateTicketCode();
 

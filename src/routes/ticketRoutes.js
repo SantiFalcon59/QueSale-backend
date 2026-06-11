@@ -20,6 +20,13 @@ router.post(
 );
 
 /**
+ * @route   POST /tickets/webhook/mercadopago
+ * @desc    Mercado Pago Webhook
+ * @access  Public
+ */
+router.post('/webhook/mercadopago', TicketController.mercadopagoWebhook);
+
+/**
  * @route   GET /tickets/my-tickets
  * @desc    Get user's tickets
  * @access  Private
