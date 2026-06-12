@@ -18,8 +18,18 @@ export class WallController {
   static async createPost(req, res, next) {
     try {
       const { wallType, wallId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user.id_user || req.user.id;
       const { content, type, media, pollOptions } = req.body;
+
+      // Premium length check
+      const limit = req.user.is_premium ? 5000 : 500;
+      if (content.length > limit) {
+        return res.status(403).json({ 
+          success: false, 
+          error: { message: `Tu publicación es muy larga (${content.length} caracteres). El límite para usuarios ${req.user.is_premium ? 'Premium' : 'estándar'} es de ${limit} caracteres.` } 
+        });
+      }
+
       const post = await WallService.createPost(wallType, wallId, userId, content, type, media, pollOptions);
       sendSuccess(res, post, 'Post created', 201);
     } catch (error) {

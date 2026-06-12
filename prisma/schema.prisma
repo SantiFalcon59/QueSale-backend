@@ -47,6 +47,8 @@ model User {
   email                   String             @unique @db.VarChar(100)
   verified                Boolean            @default(false)
   global_role             String             @default("user") @db.VarChar(20)
+  is_premium              Boolean            @default(false)
+  premium_until           DateTime?          @db.DateTime
   created_at              DateTime           @default(now())
   updated_at              DateTime           @updatedAt
 

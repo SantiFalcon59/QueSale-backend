@@ -11,7 +11,7 @@ router.get('/:wallType/:wallId', paginationMiddleware, WallController.getPosts);
 router.post(
   '/:wallType/:wallId',
   authenticateToken,
-  [body('content').trim().notEmpty().isLength({ max: 2000 })],
+  [body('content').trim().notEmpty()],
   handleValidationErrors,
   WallController.createPost
 );

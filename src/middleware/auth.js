@@ -39,6 +39,7 @@ export const authenticateToken = async (req, res, next) => {
       if (dbUser) {
         req.user.id_user = dbUser.id_user;
         req.user.global_role = dbUser.global_role || 'user';
+        req.user.is_premium = !!dbUser.is_premium;
       }
     } catch (dbError) {
       console.error('Error fetching user from DB in auth middleware:', dbError);
@@ -79,6 +80,7 @@ export const optionalAuthenticateToken = async (req, res, next) => {
       if (dbUser) {
         req.user.id_user = dbUser.id_user;
         req.user.global_role = dbUser.global_role || 'user';
+        req.user.is_premium = !!dbUser.is_premium;
       }
     } catch (error) {
       return next();

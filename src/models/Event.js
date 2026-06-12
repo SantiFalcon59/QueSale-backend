@@ -137,6 +137,16 @@ export class EventModel {
       orderBy: { date: 'asc' },
       take: limit,
       skip: offset,
+      include: {
+        creator: {
+          select: {
+            username: true,
+            is_premium: true,
+            verified: true,
+            profile: { select: { photo_url: true } }
+          }
+        }
+      }
     });
   }
 

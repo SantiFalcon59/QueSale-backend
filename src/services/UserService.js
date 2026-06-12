@@ -20,6 +20,8 @@ export class UserService {
     const frequentOrganizations = await UserModel.getFrequentOrganizations(userId);
     return {
       ...user,
+      is_premium: !!user.is_premium,
+      premium_until: user.premium_until,
       description: user.description || '',
       instagram: user.instagram || '',
       instagramVerified: !!user.instagram_verified,
@@ -166,6 +168,8 @@ export class UserService {
       instagramVerifiedAt: user.instagram_verified_at,
       usernameLastChangedAt: user.username_last_changed_at,
       verified: !!user.verified,
+      is_premium: !!user.is_premium,
+      premium_until: user.premium_until,
       createdAt: user.created_at,
       stats: {
         events: eventsCount,

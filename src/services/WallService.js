@@ -16,6 +16,7 @@ export class WallService {
           select: {
             id_user: true,
             username: true,
+            is_premium: true,
             profile: { select: { photo_url: true } },
           },
         },
@@ -123,6 +124,7 @@ export class WallService {
           select: {
             id_user: true,
             username: true,
+            is_premium: true,
             profile: { select: { photo_url: true } },
           },
         },

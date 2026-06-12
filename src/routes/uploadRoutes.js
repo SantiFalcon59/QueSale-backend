@@ -27,8 +27,14 @@ const createStorage = (dir) => multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) cb(null, true);
-  else cb(new Error('Only image files are allowed'));
+  if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype === 'image/gif' && !req.user?.is_premium && !req.user?.global_role === 'admin') {
+      return cb(new Error('GIFs are only allowed for Premium users'));
+    }
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed'));
+  }
 };
 
 const profileUpload = multer({ storage: createStorage(profileDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
