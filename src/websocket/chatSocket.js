@@ -206,6 +206,17 @@ export function initializeWebSocket(server) {
         return;
       }
 
+      // Check if event is past
+      try {
+        const event = await prisma.event.findUnique({ where: { id_event: eventId } });
+        if (event && new Date(event.date) < new Date()) {
+          socket.emit('error', { message: 'El chat está cerrado para eventos pasados' });
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking event date:', err);
+      }
+
       // Check if user is blocked from this event
       try {
         const blocked = await prisma.eventBlockedUser.findUnique({

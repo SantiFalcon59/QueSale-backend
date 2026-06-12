@@ -113,6 +113,9 @@ export class EventModel {
       if (filters.dateFrom) dateFilter.gte = new Date(filters.dateFrom);
       if (filters.dateTo) dateFilter.lte = new Date(filters.dateTo);
       andConditions.push({ date: dateFilter });
+    } else {
+      // Default: only show future events
+      andConditions.push({ date: { gte: new Date() } });
     }
 
     if (filters.tags && filters.tags.length > 0) {
@@ -195,6 +198,9 @@ export class EventModel {
       if (filters.dateFrom) dateFilter.gte = new Date(filters.dateFrom);
       if (filters.dateTo) dateFilter.lte = new Date(filters.dateTo);
       andConditions.push({ date: dateFilter });
+    } else {
+      // Default: only show future events
+      andConditions.push({ date: { gte: new Date() } });
     }
 
     if (filters.tags && filters.tags.length > 0) {
