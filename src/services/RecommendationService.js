@@ -167,10 +167,22 @@ export class RecommendationService {
    * Get Recommendations for User
    */
   static async getRecommendations(userId, limit = 10) {
-    const user = await prisma.user.findUnique({
-      where: { id_user: userId },
-      select: { embedding: true }
-    });
+    let user = null;
+    if (userId) {
+      // Try finding by id_user (UUID) first
+      user = await prisma.user.findUnique({
+        where: { id_user: userId },
+        select: { embedding: true }
+      });
+
+      // If not found, try by firebase_uid
+      if (!user) {
+        user = await prisma.user.findUnique({
+          where: { firebase_uid: userId },
+          select: { embedding: true }
+        });
+      }
+    }
 
     // Find all future active events
     const events = await prisma.event.findMany({
@@ -191,7 +203,7 @@ export class RecommendationService {
       }
     });
 
-    if (!user?.embedding || !Array.isArray(user.embedding)) {
+    if (!user || !user.embedding || !Array.isArray(user.embedding)) {
       // Fallback to featured and upcoming
       return events
         .sort((a, b) => b.featured_level - a.featured_level || a.date - b.date)

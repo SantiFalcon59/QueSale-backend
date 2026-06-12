@@ -1,6 +1,6 @@
 import express from 'express';
 import RecommendationService from '../services/RecommendationService.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { optionalAuthenticateToken } from '../middleware/auth.js';
 import { sendSuccess } from '../utils/response.js';
 
 const router = express.Router();
@@ -8,11 +8,11 @@ const router = express.Router();
 /**
  * @route   GET /api/recommendations
  * @desc    Get AI-powered personalized recommendations
- * @access  Private
+ * @access  Public (Personalized if authenticated)
  */
-router.get('/', authenticateToken, async (req, res, next) => {
+router.get('/', optionalAuthenticateToken, async (req, res, next) => {
   try {
-    const userId = req.user.id_user || req.user.id;
+    const userId = req.user ? (req.user.id_user || req.user.id) : null;
     const limit = parseInt(req.query.limit) || 10;
     
     const recommendations = await RecommendationService.getRecommendations(userId, limit);
