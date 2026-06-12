@@ -98,7 +98,7 @@ export class EventService {
     };
   }
 
-  static async getEvents(pagination, filters = {}) {
+  static async getEvents(pagination, filters = {}, userId = null) {
     const dbFilters = { ...filters };
 
     if (filters.quickDate) {
@@ -110,8 +110,11 @@ export class EventService {
 
     const events = await EventModel.getAll(pagination.limit, pagination.offset, dbFilters);
     const total = await EventModel.count(dbFilters);
+    
+    const { default: prisma } = await import('../config/prisma.js');
+    const totalActive = await prisma.event.count({ where: { status: 'active', date: { gte: new Date() } } });
 
-    const enrichedEvents = await Promise.all(
+    let enrichedEvents = await Promise.all(
       events.map(async (event) => ({
         ...event,
         attendeesCount: await EventModel.getAttendeesCount(event.id_event),
@@ -120,9 +123,38 @@ export class EventService {
       }))
     );
 
+    // AI recommendation sorting logic
+    if (userId && enrichedEvents.length > 0) {
+      try {
+        const { default: RecommendationService } = await import('./RecommendationService.js');
+        const user = await prisma.user.findUnique({
+          where: { id_user: userId },
+          select: { embedding: true }
+        });
+
+        if (user?.embedding && Array.isArray(user.embedding)) {
+          const userVec = user.embedding;
+          enrichedEvents = enrichedEvents.map(event => {
+            let score = 0;
+            if (event.embedding && Array.isArray(event.embedding)) {
+              score = RecommendationService.cosineSimilarity(userVec, event.embedding) * 100;
+            }
+            if (event.featured_level > 0) score += (event.featured_level * 10);
+            return { ...event, score };
+          });
+
+          // Re-sort by similarity score
+          enrichedEvents.sort((a, b) => (b.score || 0) - (a.score || 0));
+        }
+      } catch (err) {
+        console.error('AI Sorting Error:', err);
+      }
+    }
+
     return {
       events: enrichedEvents,
       total,
+      totalActive,
       page: pagination.page,
       limit: pagination.limit,
       hasMore: events.length === pagination.limit,

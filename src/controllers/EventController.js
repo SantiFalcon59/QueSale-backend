@@ -28,6 +28,10 @@ export class EventController {
         organizerId,
         userId
       );
+
+      // Trigger embedding generation for AI recommendations
+      RecommendationService.updateEventEmbedding(event.id_event).catch(err => console.error('BG Event Embedding Error:', err));
+
       sendSuccess(res, event, 'Event created successfully', 201);
     } catch (error) {
       next(error);
@@ -63,7 +67,7 @@ export class EventController {
         }
       }
 
-      const result = await EventService.getEvents(req.pagination, filters);
+      const result = await EventService.getEvents(req.pagination, filters, userId);
       const pagination = { ...req.pagination, total: result.total };
       sendPaginated(res, result.events, pagination, 'Events retrieved');
     } catch (error) {
@@ -104,8 +108,20 @@ export class EventController {
       if (!location) {
         return sendError(res, 'Location is required', 400);
       }
-      const events = await EventService.getNearbyEvents(location, req.pagination);
-      sendPaginated(res, events, req.pagination, 'Nearby events retrieved');
+      const userId = req.user?.id_user || req.user?.id;
+      
+      // We use a larger limit for the map but cap it at 100 later if AI sorting is applied
+      const result = await EventService.getEvents({ limit: 500, offset: 0 }, { location }, userId);
+      
+      // Limit to top 100 for the map to avoid cluttering
+      const mapEvents = result.events.slice(0, 100);
+
+      sendPaginated(res, mapEvents, { 
+        page: 1, 
+        limit: 100, 
+        total: result.total,
+        totalActive: result.totalActive 
+      }, 'Nearby events retrieved');
     } catch (error) {
       next(error);
     }
@@ -120,6 +136,10 @@ export class EventController {
       const { eventId } = req.params;
       const updateData = req.body;
       const event = await EventService.updateEvent(eventId, updateData, userId);
+
+      // Trigger embedding generation for AI recommendations
+      RecommendationService.updateEventEmbedding(eventId).catch(err => console.error('BG Event Embedding Error:', err));
+
       sendSuccess(res, event, 'Event updated successfully');
     } catch (error) {
       next(error);

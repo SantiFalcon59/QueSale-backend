@@ -77,6 +77,7 @@ model User {
   blockedInEvents         EventBlockedUser[]   @relation("UserBlockedInEvent")
   blocksInEvents          EventBlockedUser[]   @relation("UserBlocker")
   interactions            UserInteraction[]
+  embedding               Json?                // [JINA AI] User interest vector
 
   @@map("users")
 }
@@ -248,6 +249,7 @@ model Event {
   blockedUsers   EventBlockedUser[]
   eventChatMessages EventChatMessage[]
   interactions      UserInteraction[]
+  embedding         Json?                // [JINA AI] Event content vector
 
   @@map("events")
 }

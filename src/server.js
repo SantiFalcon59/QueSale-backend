@@ -27,6 +27,7 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import interestRoutes from './routes/interestRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import wallRoutes from './routes/wallRoutes.js';
+import recommendationRoutes from './routes/recommendationRoutes.js';
 
 // Import WebSocket
 import { initializeWebSocket } from './websocket/chatSocket.js';
@@ -105,6 +106,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/categories', interestRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/wall', wallRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // API Documentation
 app.get('/api', (req, res) => {
