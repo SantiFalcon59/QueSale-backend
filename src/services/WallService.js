@@ -172,8 +172,20 @@ export class WallService {
 
     if (!post) return false;
 
-    if (post.id_user !== userId) {
-      throw { statusCode: 403, message: 'Not authorized to delete this post' };
+    const dbUser = await prisma.user.findUnique({ where: { id_user: userId }, select: { global_role: true } });
+    const isGlobalMod = dbUser && ['admin', 'moderator'].includes(dbUser.global_role);
+
+    if (post.id_user !== userId && !isGlobalMod) {
+      // If it's an event post, check if user is event moderator
+      if (post.wall_type === 'event' && post.wall_id) {
+        const { isEventModerator } = await import('../utils/organizerCheck.js');
+        const isMod = await isEventModerator(userId, post.wall_id);
+        if (!isMod) {
+          throw { statusCode: 403, message: 'Not authorized to delete this post' };
+        }
+      } else {
+        throw { statusCode: 403, message: 'Not authorized to delete this post' };
+      }
     }
 
     await prisma.post.delete({ where: { id_post: postId } });
@@ -189,14 +201,25 @@ export class WallService {
   static async deleteComment(commentId, userId) {
     const comment = await prisma.comment.findUnique({
       where: { id_comment: commentId },
-      include: { post: { select: { id_user: true } } },
+      include: { post: { select: { id_user: true, wall_type: true, wall_id: true } } },
     });
 
     if (!comment) return false;
 
+    const dbUser = await prisma.user.findUnique({ where: { id_user: userId }, select: { global_role: true } });
+    const isGlobalMod = dbUser && ['admin', 'moderator'].includes(dbUser.global_role);
     const isPostOwner = comment.post?.id_user === userId;
-    if (comment.id_user !== userId && !isPostOwner) {
-      throw { statusCode: 403, message: 'Not authorized to delete this comment' };
+
+    if (comment.id_user !== userId && !isPostOwner && !isGlobalMod) {
+      if (comment.post?.wall_type === 'event' && comment.post?.wall_id) {
+        const { isEventModerator } = await import('../utils/organizerCheck.js');
+        const isMod = await isEventModerator(userId, comment.post.wall_id);
+        if (!isMod) {
+          throw { statusCode: 403, message: 'Not authorized to delete this comment' };
+        }
+      } else {
+        throw { statusCode: 403, message: 'Not authorized to delete this comment' };
+      }
     }
 
     await prisma.comment.delete({ where: { id_comment: commentId } });

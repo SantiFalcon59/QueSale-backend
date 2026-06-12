@@ -1,6 +1,6 @@
 import express from 'express';
 import UserController from '../controllers/UserController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { paginationMiddleware, handleValidationErrors } from '../middleware/validators.js';
 import { body } from 'express-validator';
 
@@ -82,7 +82,24 @@ router.delete('/saved-events/:eventId', authenticateToken, UserController.unsave
  * @desc    Get users list (admin)
  * @access  Private
  */
-router.get('/', authenticateToken, paginationMiddleware, UserController.getUsers);
+router.get('/', authenticateToken, requireAdmin, paginationMiddleware, UserController.getUsers);
+
+/**
+ * @route   PUT /users/:userId/role
+ * @desc    Update user global role (admin only)
+ * @access  Private
+ */
+router.put(
+  '/:userId/role',
+  authenticateToken,
+  requireAdmin,
+  [
+    param('userId').isString().notEmpty(),
+    body('role').isIn(['admin', 'moderator', 'user']).withMessage('Invalid role'),
+  ],
+  handleValidationErrors,
+  UserController.updateGlobalRole
+);
 
 /**
  * @route   GET /users/:userId/profile

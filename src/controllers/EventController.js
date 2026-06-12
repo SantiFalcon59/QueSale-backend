@@ -100,9 +100,8 @@ export class EventController {
    */
   static async deleteEvent(req, res, next) {
     try {
-      const userId = req.user.id;
       const { eventId } = req.params;
-      const result = await EventService.deleteEvent(eventId, userId);
+      const result = await EventService.deleteEvent(eventId, req.user);
       sendSuccess(res, result, result.message);
     } catch (error) {
       next(error);

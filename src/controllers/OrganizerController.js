@@ -1,10 +1,29 @@
 import OrganizerService from '../services/OrganizerService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+import prisma from '../config/prisma.js';
 
 /**
  * Organizer Controller
  */
 export class OrganizerController {
+  /**
+   * Verify Organizer
+   */
+  static async verifyOrganizer(req, res, next) {
+    try {
+      const { organizerId } = req.params;
+      const { verified } = req.body;
+      
+      const updated = await prisma.organizer.update({
+        where: { id_organizer: organizerId },
+        data: { verified }
+      });
+      
+      sendSuccess(res, updated, `Organizer ${verified ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      next(error);
+    }
+  }
   /**
    * Create organizer
    */

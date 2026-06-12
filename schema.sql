@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `username_last_changed_at` DATETIME DEFAULT NULL,
   `email` VARCHAR(100) NOT NULL,
   `verified` TINYINT(1) NOT NULL DEFAULT 0,
+  `global_role` ENUM('admin', 'moderator', 'user') DEFAULT 'user',
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   

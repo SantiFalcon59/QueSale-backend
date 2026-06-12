@@ -165,13 +165,17 @@ export class EventService {
     return updated;
   }
 
-  static async deleteEvent(eventId, userId) {
+  static async deleteEvent(eventId, reqUser) {
     const event = await EventModel.findById(eventId);
     if (!event) {
       throw { statusCode: 404, message: 'Event not found' };
     }
 
-    if (event.id_creator !== userId) {
+    const { default: prisma } = await import('../config/prisma.js');
+    const dbUser = await prisma.user.findUnique({ where: { firebase_uid: reqUser.id } });
+    const isGlobalAdminOrMod = ['admin', 'moderator'].includes(reqUser.global_role) || (dbUser && ['admin', 'moderator'].includes(dbUser.global_role));
+
+    if (event.id_creator !== reqUser.id && event.id_creator !== dbUser?.id_user && !isGlobalAdminOrMod) {
       throw { statusCode: 403, message: 'Unauthorized to delete this event' };
     }
 

@@ -1,9 +1,31 @@
 import { Router } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import OrganizerController from '../controllers/OrganizerController.js';
-import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
+
+/**
+ * PUT /api/organizers/:organizerId/verify
+ * Verify an organizer (Admin only)
+ */
+router.put(
+  '/:organizerId/verify',
+  authenticateToken,
+  requireAdmin,
+  [
+    param('organizerId').isUUID().withMessage('Invalid organizer ID'),
+    body('verified').isBoolean().withMessage('Verified status must be a boolean')
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, error: { message: 'Validation failed', details: errors.array() } });
+    }
+    next();
+  },
+  OrganizerController.verifyOrganizer
+);
 
 /**
  * POST /api/organizers

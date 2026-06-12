@@ -16,6 +16,25 @@ export class UserController {
   }
 
   /**
+   * Update User Global Role (Admin only)
+   */
+  static async updateGlobalRole(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      
+      const updatedUser = await prisma.user.update({
+        where: { id_user: userId },
+        data: { global_role: role }
+      });
+      
+      sendSuccess(res, updatedUser, `User role updated to ${role}`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get user profile
    */
   static async getProfile(req, res, next) {

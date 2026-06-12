@@ -1,6 +1,15 @@
 import prisma from '../config/prisma.js';
 
 export async function isEventOrganizer(userId, eventId) {
+  // Check if global admin or moderator first
+  const dbUser = await prisma.user.findUnique({
+    where: { id_user: userId },
+    select: { global_role: true }
+  });
+  if (dbUser && ['admin', 'moderator'].includes(dbUser.global_role)) {
+    return true;
+  }
+
   const event = await prisma.event.findUnique({
     where: { id_event: eventId },
     select: { id_organizer: true, id_creator: true },
@@ -14,6 +23,15 @@ export async function isEventOrganizer(userId, eventId) {
 }
 
 export async function isEventModerator(userId, eventId) {
+  // Check if global admin or moderator first
+  const dbUser = await prisma.user.findUnique({
+    where: { id_user: userId },
+    select: { global_role: true }
+  });
+  if (dbUser && ['admin', 'moderator'].includes(dbUser.global_role)) {
+    return true;
+  }
+
   const event = await prisma.event.findUnique({
     where: { id_event: eventId },
     select: { id_organizer: true, id_creator: true },

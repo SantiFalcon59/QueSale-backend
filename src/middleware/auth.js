@@ -1,4 +1,5 @@
 import { auth as firebaseAuth } from '../config/firebase.js';
+import prisma from '../config/prisma.js';
 
 /**
  * Verify JWT token from Authorization header
@@ -28,6 +29,21 @@ export const authenticateToken = async (req, res, next) => {
       email: decoded.email,
       name: decoded.name || decoded.email,
     };
+    
+    // Fetch DB user to get roles and id_user
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { firebase_uid: decoded.uid }
+      });
+      
+      if (dbUser) {
+        req.user.id_user = dbUser.id_user;
+        req.user.global_role = dbUser.global_role || 'user';
+      }
+    } catch (dbError) {
+      console.error('Error fetching user from DB in auth middleware:', dbError);
+    }
+    
     next();
   } catch (error) {
     return res.status(403).json({
@@ -55,6 +71,15 @@ export const optionalAuthenticateToken = async (req, res, next) => {
         email: decoded.email,
         name: decoded.name || decoded.email,
       };
+      
+      const dbUser = await prisma.user.findUnique({
+        where: { firebase_uid: decoded.uid }
+      });
+      
+      if (dbUser) {
+        req.user.id_user = dbUser.id_user;
+        req.user.global_role = dbUser.global_role || 'user';
+      }
     } catch (error) {
       return next();
     }
@@ -75,7 +100,7 @@ export const authorizeRole = (...allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.global_role)) {
       return res.status(403).json({
         success: false,
         error: { message: 'Insufficient permissions' },
@@ -85,3 +110,9 @@ export const authorizeRole = (...allowedRoles) => {
     next();
   };
 };
+
+/**
+ * Middleware shortcuts
+ */
+export const requireAdmin = authorizeRole('admin');
+export const requireModerator = authorizeRole('admin', 'moderator');

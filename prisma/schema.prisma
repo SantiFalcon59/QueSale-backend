@@ -27,6 +27,7 @@ model User {
   username_last_changed_at DateTime?         @db.DateTime
   email                   String             @unique @db.VarChar(100)
   verified                Boolean            @default(false)
+  global_role             String             @default("user") @db.VarChar(20)
   created_at              DateTime           @default(now())
   updated_at              DateTime           @updatedAt
 
