@@ -1,4 +1,5 @@
 import WallService from '../services/WallService.js';
+import RecommendationService, { InteractionType } from '../services/RecommendationService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
 
 export class WallController {
@@ -77,10 +78,17 @@ export class WallController {
   static async toggleReaction(req, res, next) {
     try {
       const { postId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user.id_user || req.user.id;
       const { type } = req.body;
       if (!type) return sendError(res, 'Reaction type is required', 400);
+      
       await WallService.toggleReaction(parseInt(postId), userId, type);
+
+      // Log behavior signal
+      RecommendationService.logInteraction(userId, InteractionType.LIKE_POST, {
+        metadata: { postId, type }
+      });
+
       const reactions = await WallService.getPostReactions(parseInt(postId));
       sendSuccess(res, { reactions }, 'Reaction toggled');
     } catch (error) {

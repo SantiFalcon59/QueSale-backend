@@ -3,6 +3,7 @@ import EventModel from '../models/Event.js';
 import OrganizerModel from '../models/Organizer.js';
 import UserModel from '../models/User.js';
 import MercadoPagoService from './MercadoPagoService.js';
+import RecommendationService, { InteractionType } from './RecommendationService.js';
 import { generateId, generateTicketCode, generateQRCode } from '../utils/generators.js';
 
 /**
@@ -59,6 +60,9 @@ export class TicketService {
       state: 1, // Active
       buy_date: new Date(),
     });
+
+    // Log behavior signal
+    RecommendationService.logInteraction(userId, InteractionType.PURCHASE_TICKET, { eventId });
 
     // Generate QR code data (just the UUID)
     const qrCode = await generateQRCode(uuid);
@@ -123,6 +127,10 @@ export class TicketService {
     }
 
     const validated = await TicketModel.validate(uuid);
+    
+    // Log behavior signal for attendance
+    RecommendationService.logInteraction(ticket.id_user, 'ATTEND_EVENT', { eventId: ticket.id_event });
+
     return {
       ...validated,
       event_title: event.title,

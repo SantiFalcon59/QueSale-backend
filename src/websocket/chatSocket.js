@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { verifyToken } from '../utils/jwt.js';
 import prisma from '../config/prisma.js';
+import RecommendationService, { InteractionType } from '../services/RecommendationService.js';
 
 const activeConnections = new Map(); // userId -> Set of socket ids
 const eventRooms = new Map(); // eventId -> Set of user ids
@@ -281,6 +282,9 @@ export function initializeWebSocket(server) {
             },
           },
         });
+
+        // Log behavior signal
+        RecommendationService.logInteraction(socket.userId, InteractionType.MESSAGE_EVENT, { eventId });
       } catch (err) {
         console.error('Error saving message to DB:', err);
       }

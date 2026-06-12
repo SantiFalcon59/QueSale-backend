@@ -1,4 +1,5 @@
 import EventService from '../services/EventService.js';
+import RecommendationService, { InteractionType } from '../services/RecommendationService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
 import { isEventOrganizer, isEventModerator } from '../utils/organizerCheck.js';
 
@@ -50,6 +51,18 @@ export class EventController {
         search: req.query.search,
         tags: req.query.tags ? req.query.tags.split(',') : undefined,
       };
+
+      // Log behavior signals
+      const userId = req.user?.id_user || req.user?.id;
+      if (userId) {
+        if (filters.category && filters.category !== 'ALL') {
+          RecommendationService.logInteraction(userId, InteractionType.CLICK_CATEGORY, { category: filters.category });
+        }
+        if (filters.search) {
+          RecommendationService.logInteraction(userId, InteractionType.SEARCH_QUERY, { metadata: { query: filters.search } });
+        }
+      }
+
       const result = await EventService.getEvents(req.pagination, filters);
       const pagination = { ...req.pagination, total: result.total };
       sendPaginated(res, result.events, pagination, 'Events retrieved');
@@ -64,8 +77,18 @@ export class EventController {
   static async getEventDetails(req, res, next) {
     try {
       const { eventId } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.id_user || req.user?.id;
       const event = await EventService.getEventDetails(eventId, userId);
+
+      // Log event view signal
+      if (userId && event) {
+        RecommendationService.logInteraction(userId, InteractionType.VIEW_EVENT, {
+          eventId,
+          organizerId: event.id_organizer,
+          category: event.interests?.[0]?.name
+        });
+      }
+
       sendSuccess(res, event, 'Event retrieved');
     } catch (error) {
       next(error);

@@ -20,6 +20,25 @@ enum OrganizerRole {
   viewer
 }
 
+model UserInteraction {
+  id_interaction BigInt   @id @default(autoincrement())
+  id_user        String   @db.VarChar(36)
+  type           String   @db.VarChar(50) // VIEW_EVENT, PURCHASE_TICKET, MESSAGE_EVENT, SAVE_EVENT, etc.
+  id_event       String?  @db.VarChar(36)
+  id_organizer   String?  @db.VarChar(36)
+  category       String?  @db.VarChar(50)
+  metadata       Json?
+  weight         Float    @default(1.0)
+  created_at     DateTime @default(now())
+
+  user           User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+  event          Event?   @relation(fields: [id_event], references: [id_event], onDelete: SetNull)
+
+  @@index([id_user, type])
+  @@index([id_event])
+  @@map("user_interactions")
+}
+
 model User {
   id_user                 String             @id @db.VarChar(36)
   firebase_uid            String             @unique @db.VarChar(128)
@@ -57,6 +76,7 @@ model User {
   following               UserFollower[]      @relation("UserFollowing")
   blockedInEvents         EventBlockedUser[]   @relation("UserBlockedInEvent")
   blocksInEvents          EventBlockedUser[]   @relation("UserBlocker")
+  interactions            UserInteraction[]
 
   @@map("users")
 }
@@ -227,6 +247,7 @@ model Event {
   tags           EventTag[]
   blockedUsers   EventBlockedUser[]
   eventChatMessages EventChatMessage[]
+  interactions      UserInteraction[]
 
   @@map("events")
 }

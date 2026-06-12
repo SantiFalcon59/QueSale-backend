@@ -1,5 +1,6 @@
 import UserService from '../services/UserService.js';
-import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+import RecommendationService, { InteractionType } from '../services/RecommendationService.js';
+import { sendSuccess, sendPaginated } from '../utils/response.js';
 import prisma from '../config/prisma.js';
 
 /**
@@ -109,6 +110,10 @@ export class UserController {
       const userId = await UserController.getInternalId(req.user.id);
       const { eventId } = req.params;
       await UserService.saveEvent(userId, eventId);
+
+      // Log behavior signal
+      RecommendationService.logInteraction(userId, InteractionType.SAVE_EVENT, { eventId });
+
       sendSuccess(res, null, 'Event saved successfully');
     } catch (error) {
       next(error);
@@ -123,6 +128,10 @@ export class UserController {
       const userId = await UserController.getInternalId(req.user.id);
       const { eventId } = req.params;
       await UserService.unsaveEvent(userId, eventId);
+
+      // Log behavior signal
+      RecommendationService.logInteraction(userId, InteractionType.UNSAVE_EVENT, { eventId });
+
       sendSuccess(res, null, 'Event unsaved successfully');
     } catch (error) {
       next(error);
