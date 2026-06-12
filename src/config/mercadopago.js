@@ -1,23 +1,23 @@
-import MercadoPago from 'mercadopago';
+import { MercadoPagoConfig } from 'mercadopago';
 import { config } from './index.js';
 
 /**
- * Initialize Mercado Pago SDK - Optional (development mode)
+ * Initialize Mercado Pago SDK (v2+)
  */
+let client = null;
+
 if (config.mercadopago?.accessToken) {
   try {
-    MercadoPago.configure({
-      access_token: config.mercadopago.accessToken,
-      custom_headers: {
-        'user-agent': 'QueSale/1.0',
-      },
+    client = new MercadoPagoConfig({
+      accessToken: config.mercadopago.accessToken,
+      options: { timeout: 5000 }
     });
-    console.log('✅ MercadoPago configured successfully');
+    console.log('✅ MercadoPago platform client configured successfully');
   } catch (error) {
     console.warn('⚠️ MercadoPago configuration failed:', error.message);
   }
 } else {
-  console.warn('⚠️ MercadoPago access token not configured. Skipping initialization.');
+  console.warn('⚠️ MercadoPago platform access token not configured. Skipping initialization.');
 }
 
-export default MercadoPago;
+export default client;

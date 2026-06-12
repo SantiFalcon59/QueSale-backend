@@ -134,7 +134,10 @@ export class EventModel {
 
     return await prisma.event.findMany({
       where,
-      orderBy: { date: 'asc' },
+      orderBy: [
+        { featured_level: 'desc' },
+        { date: 'asc' }
+      ],
       take: limit,
       skip: offset,
       include: {

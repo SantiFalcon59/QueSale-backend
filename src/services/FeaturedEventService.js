@@ -1,7 +1,8 @@
 import FeaturedEventModel from '../models/FeaturedEvent.js';
 import EventModel from '../models/Event.js';
 import OrganizerModel from '../models/Organizer.js';
-import MercadoPago from '../config/mercadopago.js';
+import MercadoPagoClient from '../config/mercadopago.js';
+import { Preference } from 'mercadopago';
 import { config } from '../config/index.js';
 import crypto from 'crypto';
 import { generateId } from '../utils/generators.js';
@@ -18,19 +19,19 @@ export class FeaturedEventService {
     return {
       level_1: {
         level: 1,
-        name: 'Featured - Basic',
-        price: 50,
+        name: 'Destacado Semanal',
+        price: 6000,
         duration_days: 7,
         visibility: 'Standard featured placement',
-        description: 'Aparecer en sección featured básica',
+        description: 'Tu evento aparecerá en la sección de recomendados por una semana completa.',
       },
       level_2: {
         level: 2,
-        name: 'Featured - Premium',
-        price: 150,
-        duration_days: 14,
-        visibility: 'Premium featured placement with push notification',
-        description: 'Destacado premium con notificación push',
+        name: 'Destacado Mensual',
+        price: 20000,
+        duration_days: 30,
+        visibility: 'Premium featured placement',
+        description: 'Máxima visibilidad. Tu evento estará destacado durante un mes entero.',
       },
     };
   }
@@ -131,8 +132,14 @@ export class FeaturedEventService {
         status: 'active',
       });
       
+      // Update Event table to reflect featured status
+      await EventModel.update(featured.id_event, {
+        featured_level: featured.level,
+        featured_until: featured.end_date
+      });
+
       // Send notification to organizer (future: trigger email/push)
-      console.log(`✅ Featured event ${featuredEventId} activated`);
+      console.log(`✅ Featured event ${featuredEventId} activated and Event ${featured.id_event} updated`);
       
       return updated;
     } else if (status === 'rejected' || status === 'cancelled' || status === 'failed') {
@@ -263,9 +270,15 @@ export class FeaturedEventService {
       throw { statusCode: 404, message: 'Featured event not found' };
     }
 
+    if (!MercadoPagoClient) {
+      throw { statusCode: 500, message: 'Mercado Pago not configured on platform' };
+    }
+
     try {
       // Create preference in Mercado Pago
-      const preference = {
+      const preference = new Preference(MercadoPagoClient);
+      
+      const body = {
         items: [
           {
             id: featuredEventId,
@@ -273,7 +286,7 @@ export class FeaturedEventService {
             description: `Promotion for event ${featured.id_event}`,
             picture_url: 'https://www.quesale.com/logo.png', // Add logo URL
             quantity: 1,
-            unit_price: featured.price,
+            unit_price: Number(featured.price),
             currency_id: 'ARS',
           },
         ],
@@ -282,9 +295,9 @@ export class FeaturedEventService {
           email: organizerData.email,
         },
         back_urls: {
-          success: `${config.apiUrl}/featured/success?featured_event_id=${featuredEventId}`,
-          failure: `${config.apiUrl}/featured/failure?featured_event_id=${featuredEventId}`,
-          pending: `${config.apiUrl}/featured/pending?featured_event_id=${featuredEventId}`,
+          success: `${config.frontendUrl}/organizer?status=featured_success&featured_event_id=${featuredEventId}`,
+          failure: `${config.frontendUrl}/organizer?status=featured_failure&featured_event_id=${featuredEventId}`,
+          pending: `${config.frontendUrl}/organizer?status=featured_pending&featured_event_id=${featuredEventId}`,
         },
         auto_return: 'approved', // Redirect on approved
         notification_url: config.mercadopago.notificationUrl,
@@ -295,7 +308,7 @@ export class FeaturedEventService {
       };
 
       // Save preference in Mercado Pago and get init_point (payment URL)
-      const response = await MercadoPago.Preference.save(preference);
+      const response = await preference.create({ body });
 
       return {
         featured_event_id: featuredEventId,
