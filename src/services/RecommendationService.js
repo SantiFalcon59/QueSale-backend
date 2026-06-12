@@ -199,13 +199,22 @@ export class RecommendationService {
         ubication: true,
         price: true,
         embedding: true,
-        featured_level: true
+        featured_level: true,
+        interests: {
+          include: { interest: true }
+        },
+        tags: true
       }
     });
 
     if (!user || !user.embedding || !Array.isArray(user.embedding)) {
       // Fallback to featured and upcoming
       return events
+        .map(e => ({
+          ...e,
+          interests: e.interests.map(i => i.interest),
+          tags: e.tags.map(t => t.tag)
+        }))
         .sort((a, b) => b.featured_level - a.featured_level || a.date - b.date)
         .slice(0, limit);
     }
@@ -224,7 +233,12 @@ export class RecommendationService {
       // Boost featured events
       if (event.featured_level > 0) score += (event.featured_level * 10);
 
-      return { ...event, score };
+      return { 
+        ...event, 
+        score,
+        interests: event.interests.map(i => i.interest),
+        tags: event.tags.map(t => t.tag)
+      };
     });
 
     return scoredEvents
@@ -252,13 +266,49 @@ export class RecommendationService {
 
     const eventIds = stats.map(s => s.id_event).filter(id => id !== null);
 
-    return await prisma.event.findMany({
-      where: {
-        id_event: { in: eventIds },
-        date: { gte: new Date() },
-        status: 'active'
-      }
-    });
+    let trendingEvents = [];
+    
+    if (eventIds.length > 0) {
+      trendingEvents = await prisma.event.findMany({
+        where: {
+          id_event: { in: eventIds },
+          date: { gte: new Date() },
+          status: 'active'
+        },
+        include: {
+          interests: { include: { interest: true } },
+          tags: true
+        }
+      });
+    }
+
+    // Fallback: If no trending from interactions, get featured or most recent
+    if (trendingEvents.length < limit) {
+      const remaining = limit - trendingEvents.length;
+      const fallbackEvents = await prisma.event.findMany({
+        where: {
+          id_event: { notIn: eventIds },
+          date: { gte: new Date() },
+          status: 'active'
+        },
+        include: {
+          interests: { include: { interest: true } },
+          tags: true
+        },
+        orderBy: [
+          { featured_level: 'desc' },
+          { created_at: 'desc' }
+        ],
+        take: remaining
+      });
+      trendingEvents = [...trendingEvents, ...fallbackEvents];
+    }
+
+    return trendingEvents.map(e => ({
+      ...e,
+      interests: e.interests.map(i => i.interest),
+      tags: e.tags.map(t => t.tag)
+    }));
   }
 }
 
