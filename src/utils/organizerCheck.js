@@ -16,6 +16,9 @@ export async function isEventOrganizer(userId, eventId) {
   });
   if (!event) return false;
   if (event.id_creator === userId) return true;
+  
+  if (!event.id_organizer) return false;
+
   const admin = await prisma.organizerAdmin.findUnique({
     where: { id_user_id_organizer: { id_user: userId, id_organizer: event.id_organizer } },
   });
@@ -38,6 +41,9 @@ export async function isEventModerator(userId, eventId) {
   });
   if (!event) return false;
   if (event.id_creator === userId) return true;
+  
+  if (!event.id_organizer) return false;
+
   const admin = await prisma.organizerAdmin.findUnique({
     where: { id_user_id_organizer: { id_user: userId, id_organizer: event.id_organizer } },
   });

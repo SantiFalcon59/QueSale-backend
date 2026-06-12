@@ -11,11 +11,19 @@ export class EventController {
    */
   static async createEvent(req, res, next) {
     try {
-      const userId = req.user.id;
-      const { title, description, date, location, interestIds, organizerId } = req.body;
+      const userId = req.user.id_user || req.user.id;
+      const { 
+        title, description, date, location, interestIds, organizerId, is_external, 
+        external_organizer_name, external_organizer_url,
+        external_instagram, external_tiktok, external_twitter 
+      } = req.body;
       
       const event = await EventService.createEvent(
-        { title, description, date, location, interestIds },
+        { 
+          title, description, date, location, interestIds, is_external, 
+          external_organizer_name, external_organizer_url,
+          external_instagram, external_tiktok, external_twitter 
+        },
         organizerId,
         userId
       );
@@ -85,7 +93,7 @@ export class EventController {
    */
   static async updateEvent(req, res, next) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.id_user || req.user.id;
       const { eventId } = req.params;
       const updateData = req.body;
       const event = await EventService.updateEvent(eventId, updateData, userId);

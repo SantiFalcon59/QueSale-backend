@@ -171,6 +171,10 @@ model Organizer {
   mp_access_token    String?         @db.VarChar(255)
   mp_refresh_token   String?         @db.VarChar(255)
   rating       Decimal? @db.Decimal(3, 2)
+  instagram    String?  @db.VarChar(100)
+  tiktok       String?  @db.VarChar(100)
+  twitter      String?  @db.VarChar(100)
+  website      String?  @db.VarChar(255)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
@@ -188,7 +192,13 @@ model Event {
   title          String       @db.VarChar(150)
   description    String?      @db.Text
   id_creator     String?      @db.VarChar(36)
-  id_organizer   String       @db.VarChar(36)
+  id_organizer   String?      @db.VarChar(36)
+  is_external    Boolean      @default(false)
+  external_organizer_name String? @db.VarChar(100)
+  external_organizer_url  String? @db.VarChar(500)
+  external_instagram      String? @db.VarChar(100)
+  external_tiktok         String? @db.VarChar(100)
+  external_twitter        String? @db.VarChar(100)
   date           DateTime
   ubication      String       @db.VarChar(255)
   latitude       Decimal?     @db.Decimal(10, 8)
@@ -206,7 +216,7 @@ model Event {
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
 
-  organizer      Organizer    @relation(fields: [id_organizer], references: [id_organizer], onDelete: Cascade)
+  organizer      Organizer?    @relation(fields: [id_organizer], references: [id_organizer], onDelete: Cascade)
   creator        User?        @relation("UserEventsCreated", fields: [id_creator], references: [id_user])
   interests      EventInterest[]
   tickets        Ticket[]

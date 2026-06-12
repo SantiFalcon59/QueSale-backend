@@ -57,6 +57,12 @@ export class EventService {
       ticket_type: eventData.ticket_type || 'free',
       ticket_url: eventData.ticket_url,
       qr_enabled: eventData.qr_enabled,
+      is_external: eventData.is_external || false,
+      external_organizer_name: eventData.external_organizer_name,
+      external_organizer_url: eventData.external_organizer_url,
+      external_instagram: eventData.external_instagram,
+      external_tiktok: eventData.external_tiktok,
+      external_twitter: eventData.external_twitter,
     });
 
     if (eventData.interestIds) {
@@ -144,11 +150,34 @@ export class EventService {
       throw { statusCode: 404, message: 'Event not found' };
     }
 
-    if (event.id_creator !== userId) {
+    const { default: prisma } = await import('../config/prisma.js');
+    const dbUser = await prisma.user.findUnique({ where: { id_user: userId }, select: { global_role: true } });
+    const isGlobalAdminOrMod = dbUser && ['admin', 'moderator'].includes(dbUser.global_role);
+
+    if (event.id_creator !== userId && !isGlobalAdminOrMod) {
       throw { statusCode: 403, message: 'Unauthorized to update this event' };
     }
 
-    const updated = await EventModel.update(eventId, updateData);
+    const updated = await EventModel.update(eventId, {
+      title: updateData.title,
+      description: updateData.description,
+      date: updateData.date ? new Date(updateData.date) : undefined,
+      ubication: updateData.location,
+      latitude: updateData.latitude ? String(updateData.latitude) : undefined,
+      longitude: updateData.longitude ? String(updateData.longitude) : undefined,
+      price: updateData.price !== undefined ? String(updateData.price) : undefined,
+      capacity: updateData.capacity,
+      thumbnail_url: updateData.thumbnail_url,
+      ticket_type: updateData.ticket_type,
+      ticket_url: updateData.ticket_url,
+      qr_enabled: updateData.qr_enabled,
+      is_external: updateData.is_external,
+      external_organizer_name: updateData.external_organizer_name,
+      external_organizer_url: updateData.external_organizer_url,
+      external_instagram: updateData.external_instagram,
+      external_tiktok: updateData.external_tiktok,
+      external_twitter: updateData.external_twitter,
+    });
 
     if (updateData.interestIds) {
       await EventModel.setInterests(eventId, updateData.interestIds);
