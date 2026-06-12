@@ -4,6 +4,18 @@ import prisma from '../config/prisma.js';
 const JINA_API_KEY = process.env.JINA_API_KEY;
 const JINA_EMBEDDING_URL = 'https://api.jina.ai/v1/embeddings';
 
+export const InteractionType = {
+  VIEW_EVENT: 'VIEW_EVENT',
+  SAVE_EVENT: 'SAVE_EVENT',
+  UNSAVE_EVENT: 'UNSAVE_EVENT',
+  PURCHASE_TICKET: 'PURCHASE_TICKET',
+  ATTEND_EVENT: 'ATTEND_EVENT',
+  MESSAGE_EVENT: 'MESSAGE_EVENT',
+  LIKE_POST: 'LIKE_POST',
+  CLICK_CATEGORY: 'CLICK_CATEGORY',
+  SEARCH_QUERY: 'SEARCH_QUERY'
+};
+
 export class RecommendationService {
   /**
    * Log behavior signal (as implemented before)
