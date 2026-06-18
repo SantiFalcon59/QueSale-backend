@@ -143,7 +143,8 @@ export class UserController {
    */
   static async getUsers(req, res, next) {
     try {
-      const result = await UserService.getUsers(req.pagination);
+      const { search } = req.query;
+      const result = await UserService.getUsers(req.pagination, search);
       sendPaginated(res, result.users, req.pagination, 'Users retrieved');
     } catch (error) {
       next(error);

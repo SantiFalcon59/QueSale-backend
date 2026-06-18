@@ -13,10 +13,26 @@ const router = express.Router();
 router.post(
   '/register',
   [
-    body('email').isEmail().normalizeEmail(),
-    body('username').isLength({ min: 3, max: 20 }).trim(),
-    body('password').isLength({ min: 8 }),
-    body('confirmPassword').isLength({ min: 8 }),
+    body('email')
+      .isEmail()
+      .withMessage('Ingresa un correo electrónico válido')
+      .normalizeEmail(),
+    body('username')
+      .isLength({ min: 3, max: 20 })
+      .withMessage('El nombre de usuario debe tener entre 3 y 20 caracteres')
+      .trim(),
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('La contraseña debe tener al menos 8 caracteres'),
+    body('confirmPassword')
+      .isLength({ min: 8 })
+      .withMessage('La confirmación de contraseña debe tener al menos 8 caracteres')
+      .custom((value, { req }) => {
+        if (value !== req.body.password) {
+          throw new Error('Las contraseñas no coinciden');
+        }
+        return true;
+      }),
   ],
   handleValidationErrors,
   AuthController.register

@@ -127,10 +127,20 @@ export class UserService {
   /**
    * Get users list (admin)
    */
-  static async getUsers(pagination) {
-    const users = await UserModel.getAll(pagination.limit, pagination.offset);
+  static async getUsers(pagination, searchQuery = null) {
+    let users, total;
+    
+    if (searchQuery) {
+      users = await UserModel.searchUsers(searchQuery, pagination.limit, pagination.offset);
+      total = await UserModel.countSearchUsers(searchQuery);
+    } else {
+      users = await UserModel.getAll(pagination.limit, pagination.offset);
+      total = await prisma.user.count();
+    }
+
     return {
       users,
+      total,
       page: pagination.page,
       limit: pagination.limit,
       hasMore: users.length === pagination.limit,

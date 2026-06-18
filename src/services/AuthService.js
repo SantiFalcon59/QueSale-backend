@@ -38,12 +38,12 @@ export class AuthService {
     // Check if user already exists
     const existing = await UserModel.findByEmail(email);
     if (existing) {
-      throw { statusCode: 409, message: 'Email already registered' };
+      throw { statusCode: 409, message: 'El correo electrónico ya está registrado' };
     }
 
     const usernameCheck = await UserModel.findByUsername(username);
     if (usernameCheck) {
-      throw { statusCode: 409, message: 'Username already taken' };
+      throw { statusCode: 409, message: 'El nombre de usuario ya está en uso' };
     }
 
     try {
@@ -90,7 +90,7 @@ export class AuthService {
       // Verify user exists
       const user = await UserModel.findByEmail(email);
       if (!user) {
-        throw { statusCode: 401, message: 'Invalid credentials' };
+        throw { statusCode: 401, message: 'Credenciales inválidas' };
       }
 
       // Verify with Firebase
@@ -99,12 +99,12 @@ export class AuthService {
         // Get Firebase user to validate password indirectly via Firebase
         firebaseUser = await auth.getUserByEmail(email);
       } catch (error) {
-        throw { statusCode: 401, message: 'Invalid credentials' };
+        throw { statusCode: 401, message: 'Credenciales inválidas' };
       }
 
       return {
         user,
-        message: 'Login successful',
+        message: 'Sesión iniciada correctamente',
       };
     } catch (error) {
       throw error;

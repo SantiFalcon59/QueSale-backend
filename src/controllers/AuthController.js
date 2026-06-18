@@ -13,7 +13,7 @@ export class AuthController {
       const { email, username, password, confirmPassword, photoURL } = req.body;
 
       if (password !== confirmPassword) {
-        return sendError(res, 'Passwords do not match', 400);
+        return sendError(res, 'Las contraseñas no coinciden', 400);
       }
 
       const result = await AuthService.registerUser({ email, username, password, photoURL });

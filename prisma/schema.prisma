@@ -16,8 +16,7 @@ enum EventStatus {
 
 enum OrganizerRole {
   admin
-  editor
-  viewer
+  moderator
 }
 
 model UserInteraction {

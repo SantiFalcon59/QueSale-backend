@@ -37,7 +37,7 @@ router.put(
       .withMessage('Username must be 3-20 characters and contain only letters, numbers, dots, or underscores'),
     body('email').optional().isEmail(),
     body('description').optional().isLength({ max: 1000 }),
-    body('photo_url').optional().isString(),
+    body('photo_url').optional({ nullable: true }).isString(),
   ],
   handleValidationErrors,
   UserController.updateProfile

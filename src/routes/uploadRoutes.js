@@ -28,7 +28,7 @@ const createStorage = (dir) => multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
-    if (file.mimetype === 'image/gif' && !req.user?.is_premium && !req.user?.global_role === 'admin') {
+    if (file.mimetype === 'image/gif' && (!req.user?.is_premium && req.user?.global_role !== 'admin')) {
       return cb(new Error('GIFs are only allowed for Premium users'));
     }
     cb(null, true);
@@ -37,8 +37,19 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const organizerFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype === 'image/gif') {
+      return cb(new Error('No se permiten GIFs para el logo de la organización'));
+    }
+    cb(null, true);
+  } else {
+    cb(new Error('Solo se permiten archivos de imagen'));
+  }
+};
+
 const profileUpload = multer({ storage: createStorage(profileDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
-const organizerUpload = multer({ storage: createStorage(organizerDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
+const organizerUpload = multer({ storage: createStorage(organizerDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: organizerFileFilter });
 const eventUpload = multer({ storage: createStorage(eventDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
 const postMediaUpload = multer({ storage: createStorage(postMediaDir), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter });
 

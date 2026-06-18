@@ -6,11 +6,12 @@ import { validationResult } from 'express-validator';
 export const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    const errorArray = errors.array();
     return res.status(400).json({
       success: false,
       error: {
-        message: 'Validation Error',
-        details: errors.array(),
+        message: errorArray[0].msg || 'Error de validación',
+        details: errorArray,
       },
     });
   }
