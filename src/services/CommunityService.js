@@ -1,18 +1,24 @@
 import UserModel from '../models/User.js';
 import OrganizerModel from '../models/Organizer.js';
+import EventModel from '../models/Event.js';
 
 export class CommunityService {
   static async search(query, type = 'all', limit = 20, offset = 0) {
-    const results = { users: [], organizers: [] };
+    const results = { users: [], organizers: [], events: [] };
 
     if (type === 'all' || type === 'users') {
       const users = await UserModel.searchUsers(query, limit, offset);
       results.users = users;
     }
 
-    if (type === 'all' || type === 'organizations') {
+    if (type === 'all' || type === 'organizers') {
       const organizers = await OrganizerModel.searchByName(query, limit, offset);
       results.organizers = organizers;
+    }
+
+    if (type === 'all' || type === 'events') {
+      const events = await EventModel.searchEvents(query, limit, offset);
+      results.events = events;
     }
 
     return results;

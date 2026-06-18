@@ -345,6 +345,21 @@ export class EventModel {
       await tx.event.delete({ where: { id_event: id } });
     });
   }
+
+  static async searchEvents(query, limit, offset) {
+    return await prisma.event.findMany({
+      where: {
+        OR: [
+          { title: { contains: query } },
+          { description: { contains: query } },
+        ],
+        date: { gte: new Date() },
+      },
+      orderBy: { date: 'asc' },
+      take: limit,
+      skip: offset,
+    });
+  }
 }
 
 export default EventModel;
