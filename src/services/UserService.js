@@ -74,11 +74,25 @@ export class UserService {
       userFields.username_last_changed_at = new Date();
     }
 
+    Object.keys(userFields).forEach(key => {
+      if (userFields[key] === undefined) {
+        delete userFields[key];
+      }
+    });
+
     if (Object.keys(userFields).length > 0) {
       user = await UserModel.update(userId, userFields);
     }
-    if (description !== undefined || photo_url !== undefined || updateData.instagram !== undefined) {
-      user = await UserModel.upsertProfile(userId, { description, photo_url, instagram: updateData.instagram });
+    
+    const profileData = { description, photo_url, instagram: updateData.instagram };
+    Object.keys(profileData).forEach(key => {
+      if (profileData[key] === undefined) {
+        delete profileData[key];
+      }
+    });
+
+    if (Object.keys(profileData).length > 0) {
+      user = await UserModel.upsertProfile(userId, profileData);
     }
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };

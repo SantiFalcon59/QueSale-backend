@@ -109,28 +109,34 @@ router.post('/webhook', async (req, res, next) => {
 });
 
 /**
- * @route   POST /api/subscriptions/verify
- * @desc    Verify a payment explicitly (useful for local dev and immediate updates)
+ * @route   GET /api/subscriptions/verify-payment
+ * @desc    Verify a payment explicitly via query params (avoids body-parser null byte issues)
  * @access  Private
  */
-router.post('/verify', authenticateToken, async (req, res, next) => {
+router.get('/verify-payment', authenticateToken, async (req, res, next) => {
   try {
-    const { paymentId } = req.body;
-    if (!paymentId) return sendError(res, 'ID de pago requerido', 400);
+    const { payment_id } = req.query;
+    if (!payment_id) return sendError(res, 'ID de pago requerido', 400);
 
     const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
     const { Payment } = await import('mercadopago');
     const payment = new Payment(client);
     
-    const paymentInfo = await payment.get({ id: paymentId });
+    const paymentInfo = await payment.get({ id: payment_id });
     
     if (paymentInfo.status === 'approved') {
-      const externalRef = JSON.parse(paymentInfo.external_reference);
+      let externalRef;
+      try {
+        externalRef = typeof paymentInfo.external_reference === 'string'
+          ? JSON.parse(paymentInfo.external_reference)
+          : paymentInfo.external_reference;
+      } catch {
+        return sendError(res, 'Error al procesar referencia externa', 400);
+      }
       
-      if (externalRef.type === 'premium_subscription') {
+      if (externalRef?.type === 'premium_subscription') {
         const { userId } = externalRef;
         
-        // Ensure user belongs to the current token (security check)
         const currentUserId = req.user.id_user || req.user.id;
         if (userId !== currentUserId) {
            return sendError(res, 'El pago no corresponde a este usuario', 403);
@@ -147,7 +153,8 @@ router.post('/verify', authenticateToken, async (req, res, next) => {
           }
         });
         
-        return sendSuccess(res, 'Suscripción premium activada con éxito');
+        console.log(`[SUBSCRIPTION] User ${userId} activated PREMIUM via verify-payment`);
+        return sendSuccess(res, { is_premium: true, premium_until: premiumUntil }, 'Suscripción premium activada');
       }
     }
     
