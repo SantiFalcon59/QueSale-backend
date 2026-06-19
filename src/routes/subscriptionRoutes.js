@@ -30,7 +30,7 @@ router.post('/premium', authenticateToken, async (req, res, next) => {
           id: 'premium_30_days',
           title: 'QueSale Premium (30 Días)',
           quantity: 1,
-          unit_price: 100,
+          unit_price: 10,
           currency_id: 'ARS',
           description: 'Acceso sin publicidad, insignias doradas, fotos GIF y más.',
         }
@@ -105,6 +105,55 @@ router.post('/webhook', async (req, res, next) => {
   } catch (error) {
     console.error('[SUBSCRIPTION WEBHOOK ERROR]', error);
     res.sendStatus(200); // Always 200 for webhooks to avoid retries
+  }
+});
+
+/**
+ * @route   POST /api/subscriptions/verify
+ * @desc    Verify a payment explicitly (useful for local dev and immediate updates)
+ * @access  Private
+ */
+router.post('/verify', authenticateToken, async (req, res, next) => {
+  try {
+    const { paymentId } = req.body;
+    if (!paymentId) return sendError(res, 'ID de pago requerido', 400);
+
+    const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
+    const { Payment } = await import('mercadopago');
+    const payment = new Payment(client);
+    
+    const paymentInfo = await payment.get({ id: paymentId });
+    
+    if (paymentInfo.status === 'approved') {
+      const externalRef = JSON.parse(paymentInfo.external_reference);
+      
+      if (externalRef.type === 'premium_subscription') {
+        const { userId } = externalRef;
+        
+        // Ensure user belongs to the current token (security check)
+        const currentUserId = req.user.id_user || req.user.id;
+        if (userId !== currentUserId) {
+           return sendError(res, 'El pago no corresponde a este usuario', 403);
+        }
+        
+        const premiumUntil = new Date();
+        premiumUntil.setDate(premiumUntil.getDate() + 30);
+        
+        await prisma.user.update({
+          where: { id_user: userId },
+          data: {
+            is_premium: true,
+            premium_until: premiumUntil
+          }
+        });
+        
+        return sendSuccess(res, 'Suscripción premium activada con éxito');
+      }
+    }
+    
+    return sendError(res, 'El pago aún no está aprobado o no es válido', 400);
+  } catch (error) {
+    next(error);
   }
 });
 

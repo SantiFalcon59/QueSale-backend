@@ -197,6 +197,13 @@ model Organizer {
   tiktok       String?  @db.VarChar(100)
   twitter      String?  @db.VarChar(100)
   website      String?  @db.VarChar(255)
+
+  // Nivel 2 Verification fields
+  real_name    String?  @db.VarChar(100)
+  dni          String?  @db.VarChar(50)
+  address      String?  @db.VarChar(255)
+  phone_number String?  @db.VarChar(50)
+
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
