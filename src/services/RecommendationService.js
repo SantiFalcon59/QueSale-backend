@@ -200,6 +200,7 @@ export class RecommendationService {
         price: true,
         embedding: true,
         featured_level: true,
+        images: true,
         interests: {
           include: { interest: true }
         },
