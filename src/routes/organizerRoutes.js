@@ -2,8 +2,17 @@ import { Router } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import OrganizerController from '../controllers/OrganizerController.js';
 import { authenticateToken, optionalAuthenticateToken, requireAdmin } from '../middleware/auth.js';
+import { ORGANIZER_ROLES } from '../constants/roles.js';
 
 const router = Router();
+
+/**
+ * GET /api/organizers/roles
+ * Get available organizer roles
+ */
+router.get('/roles', (req, res) => {
+  res.json({ success: true, data: ORGANIZER_ROLES });
+});
 
 /**
  * PUT /api/organizers/:organizerId/verify
@@ -162,8 +171,8 @@ router.post(
       .withMessage('Invalid admin ID'),
     body('role')
       .optional()
-      .isIn(['admin', 'editor', 'viewer'])
-      .withMessage('Role must be admin, editor, or viewer'),
+      .isIn(ORGANIZER_ROLES)
+      .withMessage(`Role must be one of: ${ORGANIZER_ROLES.join(', ')}`),
   ],
   (req, res, next) => {
     const errors = validationResult(req);

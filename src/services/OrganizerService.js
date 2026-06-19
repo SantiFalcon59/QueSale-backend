@@ -1,4 +1,5 @@
 import OrganizerModel from '../models/Organizer.js';
+import { ORGANIZER_ROLES } from '../constants/roles.js';
 import { generateId } from '../utils/generators.js';
 
 /**
@@ -131,7 +132,7 @@ export class OrganizerService {
       throw { statusCode: 403, message: 'Unauthorized' };
     }
 
-    if (!['admin', 'editor', 'viewer'].includes(role)) {
+    if (!ORGANIZER_ROLES.includes(role)) {
       throw { statusCode: 400, message: 'Invalid role' };
     }
 
