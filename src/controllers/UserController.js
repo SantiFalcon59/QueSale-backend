@@ -157,11 +157,24 @@ export class UserController {
   static async getPublicProfile(req, res, next) {
     try {
       const { userId } = req.params;
-      const user = await UserService.getPublicProfile(userId);
+      const currentUserId = req.user?.id_user || null;
+      const user = await UserService.getPublicProfile(userId, currentUserId);
       sendSuccess(res, user, 'Public profile retrieved');
     } catch (error) {
       next(error);
     }
+  }
+
+  static async getPublicProfileByUsername(req, res, next) {
+    try {
+      const { username } = req.params;
+      const currentUserId = req.user?.id_user || null;
+      const user = await UserService.getPublicProfileByUsername(username, currentUserId);
+      sendSuccess(res, user, 'Public profile retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
   }
 
   /**

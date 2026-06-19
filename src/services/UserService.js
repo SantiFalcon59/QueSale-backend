@@ -150,11 +150,67 @@ export class UserService {
   /**
    * Get user public profile
    */
-  static async getPublicProfile(userId) {
+  static async getPublicProfile(userId, currentUserId = null) {
     const user = await UserModel.getProfile(userId);
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };
     }
+
+    const recentEvents = await UserModel.getRecentEvents(userId, 5);
+    const adminOrganizations = await UserModel.getAdminOrganizations(userId);
+    const frequentOrganizations = await UserModel.getFrequentOrganizations(userId);
+
+    const eventsCount = await prisma.event.count({ where: { id_creator: userId } });
+    const followersCount = await prisma.organizerFollower.count({
+      where: { organizer: { id_creator: userId } },
+    });
+    const followingCount = await prisma.organizerFollower.count({
+      where: { id_user: userId },
+    });
+
+    let is_followed = false;
+    if (currentUserId && currentUserId !== userId) {
+      const followRecord = await prisma.userFollower.findUnique({
+        where: { id_user_id_follower: { id_user: userId, id_follower: currentUserId } },
+      });
+      is_followed = !!followRecord;
+    }
+
+    return {
+      id: user.id_user,
+      username: user.username,
+      photo_url: user.photo_url || null,
+      description: user.description || '',
+      instagram: user.instagram || '',
+      instagramVerified: !!user.instagram_verified,
+      instagramVerifiedAt: user.instagram_verified_at,
+      usernameLastChangedAt: user.username_last_changed_at,
+      verified: !!user.verified,
+      is_premium: !!user.is_premium,
+      premium_until: user.premium_until,
+      createdAt: user.created_at,
+      is_followed,
+      stats: {
+        events: eventsCount,
+        followers: followersCount,
+        following: followingCount,
+        vibeScore: 0,
+      },
+      recentEvents,
+      organizations: {
+        admin: adminOrganizations,
+        frequent: frequentOrganizations,
+      },
+    };
+  }
+
+  static async getPublicProfileByUsername(username, currentUserId = null) {
+    const user = await UserModel.findByUsername(username);
+    if (!user) {
+      throw { statusCode: 404, message: 'User not found' };
+    }
+    return this.getPublicProfile(user.id_user, currentUserId);
+  }
 
     const recentEvents = await UserModel.getRecentEvents(userId, 5);
     const adminOrganizations = await UserModel.getAdminOrganizations(userId);
