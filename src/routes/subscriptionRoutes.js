@@ -42,7 +42,7 @@ router.post('/premium', authenticateToken, async (req, res, next) => {
         userId: user.id_user,
         type: 'premium_subscription'
       }),
-      notification_url: `${process.env.API_URL}/api/subscriptions/webhook`,
+      notification_url: `${process.env.FRONTEND_URL || process.env.API_URL}/api/subscriptions/webhook`,
       back_urls: {
         success: `${process.env.FRONTEND_URL || 'http://localhost:5082'}/profile?premium_success=true`,
         failure: `${process.env.FRONTEND_URL || 'http://localhost:5082'}/profile?premium_error=true`,
