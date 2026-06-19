@@ -1,6 +1,7 @@
 import OrganizerService from '../services/OrganizerService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
 import prisma from '../config/prisma.js';
+import { RecommendationService, InteractionType } from '../services/RecommendationService.js';
 
 /**
  * Organizer Controller
@@ -46,6 +47,15 @@ export class OrganizerController {
       const { organizerId } = req.params;
       const currentUserId = req.user?.id || req.user?.userId || null;
       const organizer = await OrganizerService.getOrganizerDetails(organizerId, currentUserId);
+
+      // Log profile view signal
+      if (currentUserId) {
+        RecommendationService.logInteraction(currentUserId, InteractionType.VIEW_ORGANIZER_PROFILE, {
+          organizerId,
+          metadata: { viewedUserId: organizer.id_creator }
+        });
+      }
+
       sendSuccess(res, organizer, 'Organizer retrieved');
     } catch (error) {
       next(error);

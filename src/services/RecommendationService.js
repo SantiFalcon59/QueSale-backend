@@ -6,6 +6,7 @@ const JINA_EMBEDDING_URL = 'https://api.jina.ai/v1/embeddings';
 
 export const InteractionType = {
   VIEW_EVENT: 'VIEW_EVENT',
+  VIEW_ORGANIZER_PROFILE: 'VIEW_ORGANIZER_PROFILE',
   SAVE_EVENT: 'SAVE_EVENT',
   UNSAVE_EVENT: 'UNSAVE_EVENT',
   PURCHASE_TICKET: 'PURCHASE_TICKET',
@@ -27,6 +28,7 @@ export class RecommendationService {
       
       const weights = {
         VIEW_EVENT: 1,
+        VIEW_ORGANIZER_PROFILE: 1,
         SAVE_EVENT: 5,
         UNSAVE_EVENT: -3,
         PURCHASE_TICKET: 15,
