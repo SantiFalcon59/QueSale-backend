@@ -77,8 +77,8 @@ export class UserService {
     if (Object.keys(userFields).length > 0) {
       user = await UserModel.update(userId, userFields);
     }
-    if (description !== undefined || photo_url !== undefined) {
-      user = await UserModel.upsertProfile(userId, { description, photo_url });
+    if (description !== undefined || photo_url !== undefined || updateData.instagram !== undefined) {
+      user = await UserModel.upsertProfile(userId, { description, photo_url, instagram: updateData.instagram });
     }
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };

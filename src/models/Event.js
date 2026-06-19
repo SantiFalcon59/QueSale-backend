@@ -148,6 +148,13 @@ export class EventModel {
             verified: true,
             profile: { select: { photo_url: true } }
           }
+        },
+        organizer: {
+          select: {
+            name: true,
+            logo_url: true,
+            profile_image_url: true
+          }
         }
       }
     });

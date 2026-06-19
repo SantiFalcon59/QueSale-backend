@@ -107,11 +107,11 @@ export class UserModel {
    * Upsert user profile fields
    */
   static async upsertProfile(userId, profileData) {
-    const { description = null, photo_url = null } = profileData;
+    const { description = null, photo_url = null, instagram = null } = profileData;
     await prisma.userProfile.upsert({
       where: { id_user: userId },
-      update: { description, photo_url },
-      create: { id_user: userId, description, photo_url },
+      update: { description, photo_url, instagram },
+      create: { id_user: userId, description, photo_url, instagram },
     });
     return this.getProfile(userId);
   }
@@ -630,7 +630,10 @@ export class UserModel {
       where: { id_follower: userId },
       include: {
         user: {
-          include: { profile: { select: { photo_url: true, description: true } } },
+          include: {
+            profile: { select: { photo_url: true, description: true } },
+            followers: { select: { id_follower: true } },
+          },
         },
       },
       orderBy: { created_at: 'desc' },
@@ -643,6 +646,7 @@ export class UserModel {
       username: f.user.username,
       photo_url: f.user.profile?.photo_url || null,
       description: f.user.profile?.description || null,
+      followers_count: f.user.followers.length,
       followed_at: f.created_at,
     }));
   }
