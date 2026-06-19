@@ -157,7 +157,8 @@ router.post(
       .isUUID()
       .withMessage('Invalid organizer ID'),
     body('adminId')
-      .isUUID()
+      .isString()
+      .notEmpty()
       .withMessage('Invalid admin ID'),
     body('role')
       .optional()
