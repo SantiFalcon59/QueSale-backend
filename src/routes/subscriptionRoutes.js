@@ -85,18 +85,38 @@ router.post('/webhook', async (req, res, next) => {
          if (externalRef.type === 'premium_subscription') {
            const { userId } = externalRef;
            
-           const premiumUntil = new Date();
-           premiumUntil.setDate(premiumUntil.getDate() + 30);
-           
-           await prisma.user.update({
-             where: { id_user: userId },
-             data: {
-               is_premium: true,
-               premium_until: premiumUntil
-             }
-           });
-           
-           console.log(`[SUBSCRIPTION] User ${userId} is now PREMIUM until ${premiumUntil}`);
+            const premiumUntil = new Date();
+            premiumUntil.setDate(premiumUntil.getDate() + 30);
+            
+            try {
+              const user = await prisma.user.findUnique({
+                where: { id_user: userId },
+                select: { is_premium: true, premium_until: true }
+              });
+
+              if (user && user.is_premium && user.premium_until && user.premium_until > new Date()) {
+                console.log(`[SUBSCRIPTION] User ${userId} is already premium until ${user.premium_until}. Skipping update.`);
+              } else {
+                await prisma.user.update({
+                  where: { id_user: userId },
+                  data: {
+                    is_premium: true,
+                    premium_until: premiumUntil
+                  }
+                });
+                console.log(`[SUBSCRIPTION] User ${userId} is now PREMIUM until ${premiumUntil}`);
+              }
+            } catch (updateError) {
+              const verifyUser = await prisma.user.findUnique({
+                where: { id_user: userId },
+                select: { is_premium: true }
+              });
+              if (verifyUser && verifyUser.is_premium) {
+                console.log(`[SUBSCRIPTION] Update failed due to conflict but user ${userId} is premium. Ignoring error.`);
+              } else {
+                throw updateError;
+              }
+            }
          }
        }
     }
