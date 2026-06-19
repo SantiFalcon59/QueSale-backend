@@ -30,7 +30,7 @@ router.post('/premium', authenticateToken, async (req, res, next) => {
           id: 'premium_30_days',
           title: 'QueSale Premium (30 Días)',
           quantity: 1,
-          unit_price: 10,
+          unit_price: 1,
           currency_id: 'ARS',
           description: 'Acceso sin publicidad, insignias doradas, fotos GIF y más.',
         }

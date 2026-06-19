@@ -47,7 +47,7 @@ export class UserService {
    * Update user profile
    */
   static async updateProfile(userId, updateData) {
-    const { description, photo_url, ...userFields } = updateData;
+    const { description, photo_url, instagram, ...userFields } = updateData;
     let user = await UserModel.findById(userId);
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };

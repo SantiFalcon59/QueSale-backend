@@ -286,7 +286,7 @@ export class FeaturedEventService {
             description: `Promotion for event ${featured.id_event}`,
             picture_url: 'https://www.quesale.com/logo.png', // Add logo URL
             quantity: 1,
-            unit_price: 10, // Number(featured.price),
+            unit_price: 1, // Number(featured.price),
             currency_id: 'ARS',
           },
         ],
