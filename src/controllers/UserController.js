@@ -175,20 +175,7 @@ export class UserController {
       next(error);
     }
   }
-  }
 
-  /**
-   * Get public profile by username
-   */
-  static async getPublicProfileByUsername(req, res, next) {
-    try {
-      const { username } = req.params;
-      const user = await UserService.getPublicProfileByUsername(username);
-      sendSuccess(res, user, 'Public profile retrieved');
-    } catch (error) {
-      next(error);
-    }
-  }
 
   /**
    * Get user wall posts

@@ -212,56 +212,6 @@ export class UserService {
     return this.getPublicProfile(user.id_user, currentUserId);
   }
 
-    const recentEvents = await UserModel.getRecentEvents(userId, 5);
-    const adminOrganizations = await UserModel.getAdminOrganizations(userId);
-    const frequentOrganizations = await UserModel.getFrequentOrganizations(userId);
-
-    const eventsCount = await prisma.event.count({ where: { id_creator: userId } });
-    const followersCount = await prisma.organizerFollower.count({
-      where: { organizer: { id_creator: userId } },
-    });
-    const followingCount = await prisma.organizerFollower.count({
-      where: { id_user: userId },
-    });
-
-    return {
-      id: user.id_user,
-      username: user.username,
-      photo_url: user.photo_url || null,
-      description: user.description || '',
-      instagram: user.instagram || '',
-      instagramVerified: !!user.instagram_verified,
-      instagramVerifiedAt: user.instagram_verified_at,
-      usernameLastChangedAt: user.username_last_changed_at,
-      verified: !!user.verified,
-      is_premium: !!user.is_premium,
-      premium_until: user.premium_until,
-      createdAt: user.created_at,
-      stats: {
-        events: eventsCount,
-        followers: followersCount,
-        following: followingCount,
-        vibeScore: 0,
-      },
-      recentEvents,
-      organizations: {
-        admin: adminOrganizations,
-        frequent: frequentOrganizations,
-      },
-    };
-  }
-
-  /**
-   * Get public profile by username
-   */
-  static async getPublicProfileByUsername(username) {
-    const user = await UserModel.findByUsername(username);
-    if (!user) {
-      throw { statusCode: 404, message: 'User not found' };
-    }
-    return this.getPublicProfile(user.id_user);
-  }
-
   /**
    * Start Instagram linking
    */
