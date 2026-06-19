@@ -25,7 +25,7 @@ export class MercadoPagoService {
           id: event.id_event,
           title: `Entrada: ${event.title}`,
           quantity: 1,
-          unit_price: 1, // Number(event.price),
+          unit_price: 5, // Number(event.price),
           currency_id: 'ARS',
         }
       ],
