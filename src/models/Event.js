@@ -152,8 +152,7 @@ export class EventModel {
         organizer: {
           select: {
             name: true,
-            logo_url: true,
-            profile_image_url: true
+            logo_url: true
           }
         }
       }
