@@ -196,7 +196,8 @@ router.delete(
       .isUUID()
       .withMessage('Invalid organizer ID'),
     param('adminId')
-      .isUUID()
+      .isString()
+      .notEmpty()
       .withMessage('Invalid admin ID'),
   ],
   (req, res, next) => {
