@@ -104,11 +104,11 @@ export class TicketController {
    */
   static async mercadopagoWebhook(req, res, next) {
     try {
-      const { type, data } = req.body;
       const orgId = req.query.orgId;
+      const type = req.body?.type || req.query?.topic;
+      const paymentId = req.body?.data?.id || req.query?.id;
 
-      if (type === 'payment' && data && data.id && orgId) {
-        const paymentId = data.id;
+      if (type === 'payment' && paymentId && orgId) {
         console.log(`[WEBHOOK] Mercado Pago payment received: ${paymentId} for org: ${orgId}`);
         
         try {
@@ -116,7 +116,7 @@ export class TicketController {
           const OrganizerModel = (await import('../models/Organizer.js')).default;
           const TicketModel = (await import('../models/Ticket.js')).default;
           const MercadoPagoService = (await import('../services/MercadoPagoService.js')).default;
-          const { generateId, generateTicketCode, generateQRCode } = await import('../utils/generators.js');
+          const { generateId, generateTicketCode } = await import('../utils/generators.js');
 
           const organizer = await OrganizerModel.findById(orgId);
           if (organizer && organizer.mp_access_token) {
@@ -153,7 +153,8 @@ export class TicketController {
 
       sendSuccess(res, null, 'Webhook received');
     } catch (error) {
-      next(error);
+      console.error('[WEBHOOK OUTER ERROR]', error);
+      res.status(200).json({ success: false, error: error.message });
     }
   }
 }

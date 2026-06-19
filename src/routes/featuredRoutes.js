@@ -17,24 +17,6 @@ router.get('/pricing', FeaturedEventController.getPricingTiers);
  */
 router.post(
   '/webhook/payment',
-  [
-    body('featuredEventId')
-      .isUUID()
-      .withMessage('Invalid featured event ID'),
-    body('paymentId')
-      .notEmpty()
-      .withMessage('Payment ID required'),
-    body('status')
-      .isIn(['approved', 'rejected', 'cancelled'])
-      .withMessage('Invalid status'),
-  ],
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, error: { message: 'Validation failed', details: errors.array() } });
-    }
-    next();
-  },
   FeaturedEventController.processPaymentWebhook
 );
 

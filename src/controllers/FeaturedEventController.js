@@ -37,27 +37,61 @@ export class FeaturedEventController {
    */
   static async processPaymentWebhook(req, res, next) {
     try {
-      // For webhook to work properly, we need:
-      // 1. X-Signature header from Mercado Pago
-      // 2. Raw body string for signature validation
-      // 3. The webhook data (status, payment_id, etc)
+      let xSignature = req.headers['x-signature'];
+      let rawBody = req.rawBody || JSON.stringify(req.body); // Ensure we have raw body
 
-      const xSignature = req.headers['x-signature'];
-      const rawBody = req.rawBody || JSON.stringify(req.body); // Ensure we have raw body
+      // 1. Check if it is a standard Mercado Pago webhook/IPN payment notification
+      const type = req.body?.type || req.query?.topic;
+      const paymentIdFromNotification = req.body?.data?.id || req.query?.id;
 
-      // Mercado Pago sends data in query parameters for notification endpoint
-      const { featuredEventId, paymentId, status } = req.body || req.query;
+      let featuredEventId = req.body?.featuredEventId || req.query?.featuredEventId;
+      let paymentId = req.body?.paymentId || req.query?.paymentId || paymentIdFromNotification;
+      let status = req.body?.status || req.query?.status;
+
+      // If it's a notification from Mercado Pago and we don't have featuredEventId yet, fetch from MP API
+      if (!featuredEventId && (type === 'payment' || req.query?.topic === 'payment') && paymentIdFromNotification) {
+        console.log(`[FEATURED WEBHOOK] Standard Mercado Pago notification received for payment: ${paymentIdFromNotification}`);
+        try {
+          const { MercadoPagoConfig, Payment } = await import('mercadopago');
+          const { config } = await import('../config/index.js');
+          
+          const client = new MercadoPagoConfig({ 
+            accessToken: config.mercadopago.accessToken,
+            options: { timeout: 5000 }
+          });
+          const paymentClient = new Payment(client);
+          const paymentInfo = await paymentClient.get({ id: paymentIdFromNotification });
+          
+          if (paymentInfo) {
+            featuredEventId = paymentInfo.external_reference;
+            paymentId = paymentInfo.id;
+            status = paymentInfo.status;
+            
+            // We fetched it directly from the API, so signature check on the notification payload is not needed.
+            xSignature = null;
+            rawBody = null;
+            console.log(`[FEATURED WEBHOOK] Retrieved payment info. FeaturedEventId: ${featuredEventId}, Status: ${status}`);
+          }
+        } catch (mpError) {
+          console.error('[FEATURED WEBHOOK] Error retrieving payment info from Mercado Pago:', mpError);
+          // Return 200 to Mercado Pago to stop retries if the payment doesn't exist or is invalid
+          return res.status(200).json({ success: false, message: 'Could not fetch payment info' });
+        }
+      }
 
       if (!featuredEventId) {
-        return res.status(400).json({ 
+        // If we still don't have featuredEventId, it's either not a payment event or invalid
+        console.log(`[FEATURED WEBHOOK] No featuredEventId found in request. Body:`, req.body, `Query:`, req.query);
+        // Always return 200 to Mercado Pago to prevent infinite webhook retries for non-payment notifications
+        return res.status(200).json({ 
           success: false, 
-          error: { message: 'Missing featuredEventId' } 
+          message: 'Notification skipped or missing featuredEventId' 
         });
       }
 
       const result = await FeaturedEventService.processPayment(
         featuredEventId,
-        paymentId,
+        paymentId?.toString(),
         status,
         xSignature,
         rawBody
@@ -66,10 +100,9 @@ export class FeaturedEventController {
       // Mercado Pago expects 200 OK response quickly
       sendSuccess(res, result, `Payment ${status || 'processed'}`);
     } catch (error) {
-      // Even on error, sometimes we need to return 200 to Mercado Pago
-      // to prevent retries
+      // Even on error, return 200 to Mercado Pago to prevent retries
       console.error('Webhook error:', error);
-      next(error);
+      res.status(200).json({ success: false, error: error.message });
     }
   }
 

@@ -30,7 +30,7 @@ router.post('/premium', authenticateToken, async (req, res, next) => {
           id: 'premium_30_days',
           title: 'QueSale Premium (30 Días)',
           quantity: 1,
-          unit_price: 4999,
+          unit_price: 1,
           currency_id: 'ARS',
           description: 'Acceso sin publicidad, insignias doradas, fotos GIF y más.',
         }
@@ -69,18 +69,15 @@ router.post('/premium', authenticateToken, async (req, res, next) => {
  */
 router.post('/webhook', async (req, res, next) => {
   try {
-    const { type, data } = req.body;
+    const type = req.body?.type || req.query?.topic;
+    const paymentId = req.body?.data?.id || req.query?.id;
 
-    if (type === 'payment' && data && data.id) {
-       // In a real app, verify payment status with MP API
-       // For this implementation, we'll assume the simple flow
-       // and fetch the payment info to get the user ID
-       
+    if (type === 'payment' && paymentId) {
        const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
        const { Payment } = await import('mercadopago');
        const payment = new Payment(client);
        
-       const paymentInfo = await payment.get({ id: data.id });
+       const paymentInfo = await payment.get({ id: paymentId });
        
        if (paymentInfo.status === 'approved') {
          const externalRef = JSON.parse(paymentInfo.external_reference);
