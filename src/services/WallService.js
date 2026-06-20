@@ -172,12 +172,16 @@ export class WallService {
         where: { id_user: userId },
         select: { username: true, profile: { select: { photo_url: true } } },
       });
-      if (currentUser) {
+      const wallOwner = await prisma.user.findUnique({
+        where: { id_user: wallId },
+        select: { username: true },
+      });
+      if (currentUser && wallOwner) {
         NotificationService.notify(wallId, 'mention', currentUser.username,
           `${currentUser.username} publicó en tu perfil`,
           { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
             targetId: wallId, targetType: 'user',
-            targetLink: `/@${currentUser.username}` }
+            targetLink: `/@${wallOwner.username}` }
         );
       }
     }
@@ -262,9 +266,16 @@ export class WallService {
         select: { username: true, profile: { select: { photo_url: true } } },
       });
       if (currentUser) {
-        const targetLink = post.wall_type === 'event'
-          ? `/events/${post.wall_id}`
-          : `/@${post.wall_id}`;
+        let targetLink;
+        if (post.wall_type === 'event') {
+          targetLink = `/events/${post.wall_id}`;
+        } else {
+          const wallOwner = await prisma.user.findUnique({
+            where: { id_user: post.wall_id },
+            select: { username: true },
+          });
+          targetLink = `/@${(wallOwner?.username) || post.wall_id}`;
+        }
         NotificationService.notify(post.id_user, 'comment', currentUser.username,
           `${currentUser.username} comentó en tu publicación`,
           { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
@@ -378,9 +389,16 @@ export class WallService {
         if (currentUser) {
           const reactionEmoji = { like: '👍', love: '❤️', laugh: '😂', wow: '😮', sad: '😢', angry: '😡' };
           const emoji = reactionEmoji[type] || '👍';
-          const targetLink = post.wall_type === 'event'
-            ? `/events/${post.wall_id}`
-            : `/@${post.wall_id}`;
+          let targetLink;
+          if (post.wall_type === 'event') {
+            targetLink = `/events/${post.wall_id}`;
+          } else {
+            const wallOwner = await prisma.user.findUnique({
+              where: { id_user: post.wall_id },
+              select: { username: true },
+            });
+            targetLink = `/@${(wallOwner?.username) || post.wall_id}`;
+          }
           NotificationService.notify(post.id_user, 'like', currentUser.username,
             `${currentUser.username} reaccionó con ${emoji} a tu publicación`,
             { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
