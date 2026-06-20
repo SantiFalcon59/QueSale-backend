@@ -43,7 +43,10 @@ export class TicketModel {
     const tickets = await prisma.ticket.findMany({
       where: { id_user: userId },
       include: { event: true },
-      orderBy: { event: { date: 'desc' } },
+      orderBy: [
+        { state: 'asc' },
+        { event: { date: 'asc' } }
+      ],
       take: limit,
       skip: offset,
     });
