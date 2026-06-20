@@ -73,52 +73,52 @@ router.post('/webhook', async (req, res, next) => {
     const paymentId = req.body?.data?.id || req.query?.id;
 
     if (type === 'payment' && paymentId) {
-       const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
-       const { Payment } = await import('mercadopago');
-       const payment = new Payment(client);
+      const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
+      const { Payment } = await import('mercadopago');
+      const payment = new Payment(client);
        
-       const paymentInfo = await payment.get({ id: paymentId });
+      const paymentInfo = await payment.get({ id: paymentId });
        
-       if (paymentInfo.status === 'approved') {
-         const externalRef = JSON.parse(paymentInfo.external_reference);
+      if (paymentInfo.status === 'approved') {
+        const externalRef = JSON.parse(paymentInfo.external_reference);
          
-         if (externalRef.type === 'premium_subscription') {
-           const { userId } = externalRef;
+        if (externalRef.type === 'premium_subscription') {
+          const { userId } = externalRef;
            
-            const premiumUntil = new Date();
-            premiumUntil.setDate(premiumUntil.getDate() + 30);
+          const premiumUntil = new Date();
+          premiumUntil.setDate(premiumUntil.getDate() + 30);
             
-            try {
-              const user = await prisma.user.findUnique({
-                where: { id_user: userId },
-                select: { is_premium: true, premium_until: true }
-              });
+          try {
+            const user = await prisma.user.findUnique({
+              where: { id_user: userId },
+              select: { is_premium: true, premium_until: true }
+            });
 
-              if (user && user.is_premium && user.premium_until && user.premium_until > new Date()) {
-                console.log(`[SUBSCRIPTION] User ${userId} is already premium until ${user.premium_until}. Skipping update.`);
-              } else {
-                await prisma.user.update({
-                  where: { id_user: userId },
-                  data: {
-                    is_premium: true,
-                    premium_until: premiumUntil
-                  }
-                });
-                console.log(`[SUBSCRIPTION] User ${userId} is now PREMIUM until ${premiumUntil}`);
-              }
-            } catch (updateError) {
-              const verifyUser = await prisma.user.findUnique({
+            if (user && user.is_premium && user.premium_until && user.premium_until > new Date()) {
+              console.log(`[SUBSCRIPTION] User ${userId} is already premium until ${user.premium_until}. Skipping update.`);
+            } else {
+              await prisma.user.update({
                 where: { id_user: userId },
-                select: { is_premium: true }
+                data: {
+                  is_premium: true,
+                  premium_until: premiumUntil
+                }
               });
-              if (verifyUser && verifyUser.is_premium) {
-                console.log(`[SUBSCRIPTION] Update failed due to conflict but user ${userId} is premium. Ignoring error.`);
-              } else {
-                throw updateError;
-              }
+              console.log(`[SUBSCRIPTION] User ${userId} is now PREMIUM until ${premiumUntil}`);
             }
-         }
-       }
+          } catch (updateError) {
+            const verifyUser = await prisma.user.findUnique({
+              where: { id_user: userId },
+              select: { is_premium: true }
+            });
+            if (verifyUser && verifyUser.is_premium) {
+              console.log(`[SUBSCRIPTION] Update failed due to conflict but user ${userId} is premium. Ignoring error.`);
+            } else {
+              throw updateError;
+            }
+          }
+        }
+      }
     }
 
     res.sendStatus(200);
@@ -159,7 +159,7 @@ router.get('/verify-payment', authenticateToken, async (req, res, next) => {
         
         const currentUserId = req.user.id_user || req.user.id;
         if (userId !== currentUserId) {
-           return sendError(res, 'El pago no corresponde a este usuario', 403);
+          return sendError(res, 'El pago no corresponde a este usuario', 403);
         }
         
         const premiumUntil = new Date();

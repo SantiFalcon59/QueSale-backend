@@ -60,7 +60,7 @@ app.use(helmet({
   crossOriginOpenerPolicy: { policy: 'unsafe-none' },
 })); // Security headers
 
-console.log("CORS CONFIG:", config.cors);
+console.log('CORS CONFIG:', config.cors);
 
 app.use(cors(config.cors)); // CORS
 app.use(
@@ -145,16 +145,16 @@ server.listen(PORT, () => {
   console.log(`🌐 API URL: ${config.apiUrl}`);
   console.log('');
   console.log('📚 Available endpoints:');
-  console.log(`  - GET  /health`);
-  console.log(`  - GET  /api`);
-  console.log(`  - POST /api/auth/register`);
-  console.log(`  - POST /api/auth/login`);
-  console.log(`  - POST /api/auth/login-firebase`);
-  console.log(`  - GET  /api/users/profile`);
-  console.log(`  - GET  /api/events`);
-  console.log(`  - POST /api/events`);
-  console.log(`  - GET  /api/tickets/my-tickets`);
-  console.log(`  - POST /api/tickets/purchase`);
+  console.log('  - GET  /health');
+  console.log('  - GET  /api');
+  console.log('  - POST /api/auth/register');
+  console.log('  - POST /api/auth/login');
+  console.log('  - POST /api/auth/login-firebase');
+  console.log('  - GET  /api/users/profile');
+  console.log('  - GET  /api/events');
+  console.log('  - POST /api/events');
+  console.log('  - GET  /api/tickets/my-tickets');
+  console.log('  - POST /api/tickets/purchase');
   console.log('');
   console.log('🔌 WebSocket connection available at:');
   console.log(`  - ws://localhost:${PORT}`);

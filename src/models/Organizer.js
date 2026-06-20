@@ -304,7 +304,7 @@ export class OrganizerModel {
         total_posts: 0, total_comments: 0, total_reactions: 0,
         total_chat_messages: 0, capacity_utilization: 0, validation_rate: 0,
         follower_growth_30d: 0, avg_rating_count: 0,
-        rating_distribution: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 },
+        rating_distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
         per_event: [],
         trending: { top_by_views: null, top_by_tickets: null, top_by_engagement: null },
       };
@@ -386,7 +386,7 @@ export class OrganizerModel {
       ORDER BY rating
     `;
 
-    const rating_distribution = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
+    const rating_distribution = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
     let avg_rating_count = 0;
     for (const row of ratingDistRaw) {
       rating_distribution[String(row.rating)] = Number(row.cnt);

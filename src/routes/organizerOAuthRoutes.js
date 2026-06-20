@@ -33,9 +33,11 @@ router.get('/:organizerId/oauth/mercadopago', authenticateToken, async (req, res
     const oauth = new OAuth(client);
 
     const authorizationUrl = oauth.getAuthorizationURL({
-      client_id: config.mercadopago.clientId,
-      redirect_uri: config.mercadopago.redirectUri,
-      state: organizerId, // Pass organizer ID as state to link callback
+      options: {
+        client_id: config.mercadopago.clientId,
+        redirect_uri: config.mercadopago.redirectUri,
+        state: organizerId, // Pass organizer ID as state to link callback
+      }
     });
 
     res.json({ success: true, url: authorizationUrl });
@@ -70,10 +72,12 @@ router.get('/oauth/mercadopago/callback', async (req, res, next) => {
     const oauth = new OAuth(client);
 
     const response = await oauth.create({
-      client_id: config.mercadopago.clientId,
-      client_secret: config.mercadopago.clientSecret,
-      code: code,
-      redirect_uri: config.mercadopago.redirectUri,
+      body: {
+        client_id: config.mercadopago.clientId,
+        client_secret: config.mercadopago.clientSecret,
+        code: code,
+        redirect_uri: config.mercadopago.redirectUri,
+      }
     });
 
     // Save tokens securely

@@ -81,7 +81,7 @@ export class FeaturedEventController {
 
       if (!featuredEventId) {
         // If we still don't have featuredEventId, it's either not a payment event or invalid
-        console.log(`[FEATURED WEBHOOK] No featuredEventId found in request. Body:`, req.body, `Query:`, req.query);
+        console.log('[FEATURED WEBHOOK] No featuredEventId found in request. Body:', req.body, 'Query:', req.query);
         // Always return 200 to Mercado Pago to prevent infinite webhook retries for non-payment notifications
         return res.status(200).json({ 
           success: false, 

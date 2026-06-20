@@ -48,7 +48,7 @@ export class TicketService {
     }
     
     if (event.ticket_type === 'mercadopago') {
-       throw { statusCode: 400, message: 'El precio del evento debe ser mayor a 0 para usar Mercado Pago' };
+      throw { statusCode: 400, message: 'El precio del evento debe ser mayor a 0 para usar Mercado Pago' };
     }
 
     // Create ticket (for free events or paid events where organizer doesn't have MP set up yet)

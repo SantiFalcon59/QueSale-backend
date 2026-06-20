@@ -10,32 +10,32 @@ const getDateRange = (quickDate) => {
   let dateFrom, dateTo;
 
   switch (quickDate) {
-    case 'today':
-      dateFrom = start;
-      dateTo = new Date(start.getTime() + 86400000);
-      break;
-    case 'tomorrow':
-      dateFrom = new Date(start.getTime() + 86400000);
-      dateTo = new Date(dateFrom.getTime() + 86400000);
-      break;
-    case 'weekend': {
-      const dayOfWeek = start.getDay();
-      const daysToSaturday = dayOfWeek <= 6 ? (6 - dayOfWeek) : 6;
-      const saturday = new Date(start.getTime() + daysToSaturday * 86400000);
-      dateFrom = saturday;
-      dateTo = new Date(saturday.getTime() + 2 * 86400000);
-      break;
-    }
-    case 'next-week':
-      dateFrom = new Date(start.getTime() + 7 * 86400000);
-      dateTo = new Date(dateFrom.getTime() + 7 * 86400000);
-      break;
-    case 'next-month':
-      dateFrom = new Date(start.getTime() + 30 * 86400000);
-      dateTo = new Date(dateFrom.getTime() + 30 * 86400000);
-      break;
-    default:
-      break;
+  case 'today':
+    dateFrom = start;
+    dateTo = new Date(start.getTime() + 86400000);
+    break;
+  case 'tomorrow':
+    dateFrom = new Date(start.getTime() + 86400000);
+    dateTo = new Date(dateFrom.getTime() + 86400000);
+    break;
+  case 'weekend': {
+    const dayOfWeek = start.getDay();
+    const daysToSaturday = dayOfWeek <= 6 ? (6 - dayOfWeek) : 6;
+    const saturday = new Date(start.getTime() + daysToSaturday * 86400000);
+    dateFrom = saturday;
+    dateTo = new Date(saturday.getTime() + 2 * 86400000);
+    break;
+  }
+  case 'next-week':
+    dateFrom = new Date(start.getTime() + 7 * 86400000);
+    dateTo = new Date(dateFrom.getTime() + 7 * 86400000);
+    break;
+  case 'next-month':
+    dateFrom = new Date(start.getTime() + 30 * 86400000);
+    dateTo = new Date(dateFrom.getTime() + 30 * 86400000);
+    break;
+  default:
+    break;
   }
 
   return { dateFrom, dateTo };
