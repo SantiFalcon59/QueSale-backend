@@ -250,32 +250,69 @@ export class UserModel {
   }
 
   /**
-   * Get recent events attended by user (public)
+   * Get recent events attended or created by user (public)
    */
   static async getRecentEvents(userId, limit = 5) {
-    const tickets = await prisma.ticket.findMany({
-      where: {
-        id_user: userId,
-        event: { date: { lte: new Date() } },
-      },
-      include: {
-        event: {
-          include: { organizer: true },
+    const [tickets, createdEvents] = await Promise.all([
+      prisma.ticket.findMany({
+        where: {
+          id_user: userId,
+          event: { date: { lte: new Date() } },
         },
-      },
-      orderBy: { event: { date: 'desc' } },
-      take: limit,
-    });
+        include: {
+          event: {
+            include: { organizer: true },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+        take: limit,
+      }),
+      prisma.event.findMany({
+        where: {
+          id_creator: userId,
+        },
+        include: {
+          organizer: true,
+        },
+        orderBy: { created_at: 'desc' },
+        take: limit,
+      }),
+    ]);
 
-    return tickets.map(item => ({
-      id_event: item.event.id_event,
-      title: item.event.title,
-      date: item.event.date,
-      ubication: item.event.ubication,
-      thumbnail_url: item.event.thumbnail_url,
-      id_organizer: item.event.organizer?.id_organizer || null,
-      organizer_name: item.event.organizer?.name || null,
-    }));
+    const activities = [];
+
+    for (const ticket of tickets) {
+      if (ticket.event) {
+        activities.push({
+          id_event: ticket.event.id_event,
+          title: ticket.event.title,
+          date: ticket.event.date,
+          ubication: ticket.event.ubication,
+          thumbnail_url: ticket.event.thumbnail_url,
+          id_organizer: ticket.event.organizer?.id_organizer || null,
+          organizer_name: ticket.event.organizer?.name || null,
+          activity_type: 'asistencia',
+          timestamp: ticket.created_at || ticket.event.date,
+        });
+      }
+    }
+
+    for (const event of createdEvents) {
+      activities.push({
+        id_event: event.id_event,
+        title: event.title,
+        date: event.date,
+        ubication: event.ubication,
+        thumbnail_url: event.thumbnail_url,
+        id_organizer: event.organizer?.id_organizer || null,
+        organizer_name: event.organizer?.name || null,
+        activity_type: 'creacion',
+        timestamp: event.created_at || event.date,
+      });
+    }
+
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return activities.slice(0, limit);
   }
 
   /**

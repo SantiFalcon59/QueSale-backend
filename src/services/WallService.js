@@ -26,7 +26,7 @@ export class WallService {
           select: { id_user: true, type: true },
         },
         comments: {
-          include: { user: { select: { id_user: true, username: true } } },
+          include: { user: { select: { id_user: true, username: true, profile: { select: { photo_url: true } } } } },
           orderBy: { created_at: 'asc' },
         },
       },
@@ -89,6 +89,7 @@ export class WallService {
         comments: post.comments.map(c => ({
           ...c,
           author: c.user?.username || 'Anónimo',
+          author_photo_url: c.user?.profile?.photo_url || null,
         })),
       };
     });
@@ -247,7 +248,13 @@ export class WallService {
 
     const comment = await prisma.comment.create({
       data: { id_post: postId, id_user: userId, content },
+      include: { user: { select: { id_user: true, username: true, profile: { select: { photo_url: true } } } } },
     });
+    const result = {
+      ...comment,
+      author: comment.user?.username || 'Anónimo',
+      author_photo_url: comment.user?.profile?.photo_url || null,
+    };
 
     if (post && post.id_user !== userId) {
       const currentUser = await prisma.user.findUnique({
@@ -293,7 +300,7 @@ export class WallService {
       }
     }
 
-    return comment;
+    return result;
   }
 
   static async deleteComment(commentId, userId) {

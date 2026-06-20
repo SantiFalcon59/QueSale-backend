@@ -100,6 +100,12 @@ export class CommunityService {
               profile: { select: { photo_url: true } },
             },
           },
+          event: {
+            select: {
+              id_event: true,
+              title: true,
+            },
+          },
           reactions: {
             select: { id_user: true, type: true },
           },
@@ -129,6 +135,7 @@ export class CommunityService {
           author_photo_url: post.user?.profile?.photo_url || null,
           reactions: reactionCounts,
           user_reaction: userReaction,
+          event: post.event ? { id_event: post.event.id_event, title: post.event.title } : null,
         };
       });
     } catch (error) {

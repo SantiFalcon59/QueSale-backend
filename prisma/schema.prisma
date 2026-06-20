@@ -193,9 +193,9 @@ model Organizer {
   mp_access_token    String?         @db.VarChar(255)
   mp_refresh_token   String?         @db.VarChar(255)
   rating       Decimal? @db.Decimal(3, 2)
-  instagram    String?  @db.VarChar(100)
-  tiktok       String?  @db.VarChar(100)
-  twitter      String?  @db.VarChar(100)
+  instagram      String?  @db.VarChar(100)
+  tiktok         String?  @db.VarChar(100)
+  twitter        String?  @db.VarChar(100)
   website      String?  @db.VarChar(255)
 
   // Nivel 2 Verification fields
