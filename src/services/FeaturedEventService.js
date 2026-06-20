@@ -56,6 +56,11 @@ export class FeaturedEventService {
       throw { statusCode: 404, message: 'Organizer not found' };
     }
 
+    // Verify organizer is Level 2 (verified)
+    if (!organizer.verified) {
+      throw { statusCode: 403, message: 'Solo organizaciones verificadas Nivel 2 pueden destacar eventos' };
+    }
+
     // Verify user is admin of organizer
     const isAdmin = await OrganizerModel.isAdmin(organizerId, userId);
     if (!isAdmin && organizer.id_creator !== userId) {
@@ -127,23 +132,43 @@ export class FeaturedEventService {
     }
 
     if (status === 'approved' || status === 'completed') {
-      const updated = await FeaturedEventModel.update(featuredEventId, {
-        payment_id: paymentId,
-        status: 'active',
-      });
-      
-      // Update Event table to reflect featured status
-      await EventModel.update(featured.id_event, {
-        featured_level: featured.level,
-        featured_until: featured.end_date
-      });
+      if (featured.status === 'active') {
+        console.log(`ℹ️ Featured event ${featuredEventId} is already active, skipping update`);
+        return featured;
+      }
 
-      // Send notification to organizer (future: trigger email/push)
-      console.log(`✅ Featured event ${featuredEventId} activated and Event ${featured.id_event} updated`);
-      
-      return updated;
+      try {
+        const updated = await FeaturedEventModel.update(featuredEventId, {
+          payment_id: paymentId,
+          status: 'active',
+        });
+        
+        // Update Event table to reflect featured status
+        await EventModel.update(featured.id_event, {
+          featured_level: featured.level,
+          featured_until: featured.end_date
+        });
+
+        // Send notification to organizer (future: trigger email/push)
+        console.log(`✅ Featured event ${featuredEventId} activated and Event ${featured.id_event} updated`);
+        
+        return updated;
+      } catch (updateError) {
+        console.warn(`[WARNING] Concurrent update error on featured event ${featuredEventId}:`, updateError.message || updateError);
+        // Double check status after failure, maybe another thread successfully updated it
+        const doubleCheck = await FeaturedEventModel.findById(featuredEventId);
+        if (doubleCheck && doubleCheck.status === 'active') {
+          console.log(`ℹ️ Double check confirmed featured event ${featuredEventId} is active`);
+          return doubleCheck;
+        }
+        throw updateError;
+      }
     } else if (status === 'rejected' || status === 'cancelled' || status === 'failed') {
-      await FeaturedEventModel.delete(featuredEventId);
+      try {
+        await FeaturedEventModel.delete(featuredEventId);
+      } catch (deleteError) {
+        console.warn(`[WARNING] Error or concurrent delete on featured event ${featuredEventId}:`, deleteError.message || deleteError);
+      }
       throw { statusCode: 400, message: `Payment ${status}. Featured event cancelled` };
     }
 

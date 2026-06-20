@@ -57,7 +57,10 @@ export class UserModel {
    */
   static async getAll(limit, offset) {
     const users = await prisma.user.findMany({
-      include: { profile: true },
+      include: {
+        profile: true,
+        _count: { select: { followers: true } },
+      },
       orderBy: { created_at: 'desc' },
       take: limit,
       skip: offset,
@@ -67,6 +70,7 @@ export class UserModel {
       ...user,
       photo_url: user.profile?.photo_url || null,
       description: user.profile?.description || null,
+      followers_count: user._count?.followers || 0,
     }));
   }
 
@@ -561,7 +565,7 @@ export class UserModel {
       },
       include: {
         profile: { select: { photo_url: true, description: true } },
-        followers: { select: { id_follower: true } },
+        _count: { select: { followers: true } },
       },
       take: limit,
       skip: offset,
@@ -573,7 +577,7 @@ export class UserModel {
       username: user.username,
       photo_url: user.profile?.photo_url || null,
       description: user.profile?.description || null,
-      followers_count: user.followers.length,
+      followers_count: user._count?.followers || 0,
       created_at: user.created_at,
     }));
   }
@@ -642,7 +646,10 @@ export class UserModel {
       where: { id_user: userId },
       include: {
         follower: {
-          include: { profile: { select: { photo_url: true, description: true } } },
+          include: {
+            profile: { select: { photo_url: true, description: true } },
+            _count: { select: { followers: true } },
+          },
         },
       },
       orderBy: { created_at: 'desc' },
@@ -655,6 +662,7 @@ export class UserModel {
       username: f.follower.username,
       photo_url: f.follower.profile?.photo_url || null,
       description: f.follower.profile?.description || null,
+      followers_count: f.follower._count?.followers || 0,
       followed_at: f.created_at,
     }));
   }
@@ -669,7 +677,7 @@ export class UserModel {
         user: {
           include: {
             profile: { select: { photo_url: true, description: true } },
-            followers: { select: { id_follower: true } },
+            _count: { select: { followers: true } },
           },
         },
       },
@@ -683,7 +691,7 @@ export class UserModel {
       username: f.user.username,
       photo_url: f.user.profile?.photo_url || null,
       description: f.user.profile?.description || null,
-      followers_count: f.user.followers.length,
+      followers_count: f.user._count?.followers || 0,
       followed_at: f.created_at,
     }));
   }
