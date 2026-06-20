@@ -1,6 +1,7 @@
 import UserModel from '../models/User.js';
 import OrganizerModel from '../models/Organizer.js';
 import EventModel from '../models/Event.js';
+import { NotificationService } from './NotificationService.js';
 
 export class CommunityService {
   static async search(query, type = 'all', limit = 20, offset = 0) {
@@ -37,6 +38,20 @@ export class CommunityService {
     const result = await UserModel.followUser(targetUserId, userId);
     if (result === null) {
       throw { statusCode: 409, message: 'Ya sigues a este usuario' };
+    }
+
+    const { default: prisma } = await import('../config/prisma.js');
+    const currentUser = await prisma.user.findUnique({
+      where: { id_user: userId },
+      select: { username: true, profile: { select: { photo_url: true } } },
+    });
+    if (currentUser) {
+      NotificationService.notify(targetUserId, 'new_follower', currentUser.username,
+        `${currentUser.username} empezó a seguirte`,
+        { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
+          targetId: targetUserId, targetType: 'user',
+          targetLink: `/@${currentUser.username}` }
+      );
     }
 
     return { message: 'Usuario seguido exitosamente' };

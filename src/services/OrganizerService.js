@@ -1,6 +1,7 @@
 import OrganizerModel from '../models/Organizer.js';
 import { ORGANIZER_ROLES } from '../constants/roles.js';
 import { generateId } from '../utils/generators.js';
+import { NotificationService } from './NotificationService.js';
 
 /**
  * Organizer Service
@@ -195,6 +196,21 @@ export class OrganizerService {
     }
 
     await OrganizerModel.addFollower(organizerId, userId);
+
+    const { default: prisma } = await import('../config/prisma.js');
+    const currentUser = await prisma.user.findUnique({
+      where: { id_user: userId },
+      select: { username: true, profile: { select: { photo_url: true } } },
+    });
+    if (currentUser && organizer.id_creator) {
+      NotificationService.notify(organizer.id_creator, 'new_follower', currentUser.username,
+        `${currentUser.username} empezó a seguir tu organización "${organizer.name}"`,
+        { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
+          targetId: organizerId, targetType: 'organizer',
+          targetLink: `/organizer/${organizerId}` }
+      );
+    }
+
     return { message: 'Following organizer' };
   }
 

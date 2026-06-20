@@ -1,5 +1,6 @@
 import TicketService from '../services/TicketService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+import { NotificationService } from '../services/NotificationService.js';
 import prisma from '../config/prisma.js';
 
 /**
@@ -141,6 +142,27 @@ export class TicketController {
                     state: 1, // Active
                     buy_date: new Date(),
                   });
+
+                  const buyer = await prisma.user.findUnique({
+                    where: { id_user: userId },
+                    select: { username: true, profile: { select: { photo_url: true } } },
+                  });
+                  const eventData = await prisma.event.findUnique({
+                    where: { id_event: eventId },
+                    select: { title: true, id_organizer: true },
+                  });
+                  if (buyer && eventData && eventData.id_organizer) {
+                    const organizer = await (await import('../models/Organizer.js')).default.findById(eventData.id_organizer);
+                    if (organizer && organizer.id_creator) {
+                      NotificationService.notify(organizer.id_creator, 'ticket_purchase', buyer.username,
+                        `${buyer.username} compró una entrada para "${eventData.title}"`,
+                        { fromId: userId, fromPhoto: buyer.profile?.photo_url,
+                          targetId: eventId, targetType: 'event',
+                          targetLink: `/events/${eventId}` }
+                      );
+                    }
+                  }
+
                   console.log(`[WEBHOOK] Ticket created for user ${userId} in event ${eventId}`);
                 }
               }

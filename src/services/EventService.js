@@ -1,5 +1,6 @@
 import EventModel from '../models/Event.js';
 import { generateId } from '../utils/generators.js';
+import { NotificationService } from './NotificationService.js';
 
 const getDateRange = (quickDate) => {
   const now = new Date();
@@ -73,6 +74,29 @@ export class EventService {
     const allTags = [...new Set([...(eventData.tags || []), ...hashtags])];
     if (allTags.length > 0) {
       await EventModel.setTags(eventId, allTags);
+    }
+
+    // Notify organizer followers about the new event
+    const { default: prisma } = await import('../config/prisma.js');
+    const followers = await prisma.organizerFollower.findMany({
+      where: { id_organizer: organizerId },
+      select: { id_user: true },
+    });
+    if (followers.length > 0) {
+      const organizerData = await prisma.organizer.findUnique({
+        where: { id_organizer: organizerId },
+        select: { name: true },
+      });
+      const organizerName = organizerData?.name || 'Una organización';
+      await prisma.notification.createMany({
+        data: followers.map(f => ({
+          id_user: f.id_user,
+          type: 'event_update',
+          title: organizerName,
+          message: `${organizerName} publicó un nuevo evento: "${eventData.title}"`,
+          data: { targetId: eventId, targetType: 'event', targetLink: `/events/${eventId}` },
+        })),
+      });
     }
 
     return event;

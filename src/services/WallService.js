@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { NotificationService } from './NotificationService.js';
 
 export class WallService {
   static async getPosts(wallType, wallId, pagination, typeFilter, currentUserId = null) {
@@ -163,6 +164,22 @@ export class WallService {
       result.userVote = null;
     }
 
+    // Notify profile owner when someone posts on their wall
+    if (wallType === 'profile' && wallId !== userId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id_user: userId },
+        select: { username: true, profile: { select: { photo_url: true } } },
+      });
+      if (currentUser) {
+        NotificationService.notify(wallId, 'mention', currentUser.username,
+          `${currentUser.username} publicó en tu perfil`,
+          { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
+            targetId: wallId, targetType: 'user',
+            targetLink: `/@${currentUser.username}` }
+        );
+      }
+    }
+
     return result;
   }
 
@@ -195,9 +212,33 @@ export class WallService {
   }
 
   static async createComment(postId, userId, content) {
-    return await prisma.comment.create({
+    const post = await prisma.post.findUnique({
+      where: { id_post: postId },
+      select: { id_user: true, wall_type: true, wall_id: true },
+    });
+
+    const comment = await prisma.comment.create({
       data: { id_post: postId, id_user: userId, content },
     });
+
+    if (post && post.id_user !== userId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id_user: userId },
+        select: { username: true, profile: { select: { photo_url: true } } },
+      });
+      if (currentUser) {
+        const targetLink = post.wall_type === 'event'
+          ? `/events/${post.wall_id}`
+          : `/@${post.wall_id}`;
+        NotificationService.notify(post.id_user, 'comment', currentUser.username,
+          `${currentUser.username} comentó en tu publicación`,
+          { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
+            targetId: String(postId), targetType: 'post', targetLink }
+        );
+      }
+    }
+
+    return comment;
   }
 
   static async deleteComment(commentId, userId) {
@@ -233,33 +274,61 @@ export class WallService {
       where: { id_post_id_user: { id_post: postId, id_user: userId } },
     });
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       if (existing) {
         if (existing.type === type) {
           await tx.postReaction.delete({
             where: { id_post_id_user: { id_post: postId, id_user: userId } },
           });
-          return await tx.post.update({
+          return { action: 'removed', post: await tx.post.update({
             where: { id_post: postId },
             data: { likes_count: { decrement: 1 } },
-          });
+          })};
         } else {
           await tx.postReaction.update({
             where: { id_post_id_user: { id_post: postId, id_user: userId } },
             data: { type },
           });
-          return await tx.post.findUnique({ where: { id_post: postId } });
+          return { action: 'changed', post: await tx.post.findUnique({ where: { id_post: postId } }) };
         }
       } else {
         await tx.postReaction.create({
           data: { id_post: postId, id_user: userId, type },
         });
-        return await tx.post.update({
+        return { action: 'added', post: await tx.post.update({
           where: { id_post: postId },
           data: { likes_count: { increment: 1 } },
-        });
+        })};
       }
     });
+
+    // Notify post author on new reaction
+    if (result.action === 'added') {
+      const post = await prisma.post.findUnique({
+        where: { id_post: postId },
+        select: { id_user: true, wall_type: true, wall_id: true },
+      });
+      if (post && post.id_user !== userId) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id_user: userId },
+          select: { username: true, profile: { select: { photo_url: true } } },
+        });
+        if (currentUser) {
+          const reactionEmoji = { like: '👍', love: '❤️', laugh: '😂', wow: '😮', sad: '😢', angry: '😡' };
+          const emoji = reactionEmoji[type] || '👍';
+          const targetLink = post.wall_type === 'event'
+            ? `/events/${post.wall_id}`
+            : `/@${post.wall_id}`;
+          NotificationService.notify(post.id_user, 'like', currentUser.username,
+            `${currentUser.username} reaccionó con ${emoji} a tu publicación`,
+            { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
+              targetId: String(postId), targetType: 'post', targetLink }
+          );
+        }
+      }
+    }
+
+    return result.post;
   }
 
   static async votePoll(optionId, userId) {
