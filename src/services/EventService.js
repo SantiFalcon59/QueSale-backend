@@ -1,6 +1,7 @@
 import EventModel from '../models/Event.js';
 import { generateId } from '../utils/generators.js';
 import { NotificationService } from './NotificationService.js';
+import { getOrganizerStaffMembers } from '../utils/organizerCheck.js';
 
 const getDateRange = (quickDate) => {
   const now = new Date();
@@ -245,6 +246,24 @@ export class EventService {
       await EventModel.setTags(eventId, allTags);
     } else if (updateData.tags) {
       await EventModel.setTags(eventId, []);
+    }
+
+    // Notify organizer staff about event update
+    if (event.id_organizer) {
+      const staffIds = await getOrganizerStaffMembers(event.id_organizer);
+      const updater = await prisma.user.findUnique({
+        where: { id_user: userId },
+        select: { username: true },
+      });
+      for (const sid of staffIds) {
+        if (sid !== userId) {
+          NotificationService.notify(sid, 'event_update', updater?.username || 'Alguien',
+            `Se actualizó el evento "${updated.title || event.title}"`,
+            { fromId: userId, targetId: eventId, targetType: 'event',
+              targetLink: `/events/${eventId}` }
+          );
+        }
+      }
     }
 
     return updated;

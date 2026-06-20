@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { NotificationService } from './NotificationService.js';
+import { getOrganizerStaffMembers } from '../utils/organizerCheck.js';
 
 export class WallService {
   static async getPosts(wallType, wallId, pagination, typeFilter, currentUserId = null) {
@@ -180,6 +181,33 @@ export class WallService {
       }
     }
 
+    // Notify organizer staff when someone posts on event wall
+    if (wallType === 'event' && wallId) {
+      const event = await prisma.event.findUnique({
+        where: { id_event: wallId },
+        select: { id_organizer: true, title: true },
+      });
+      if (event?.id_organizer) {
+        const author = await prisma.user.findUnique({
+          where: { id_user: userId },
+          select: { username: true, profile: { select: { photo_url: true } } },
+        });
+        if (author) {
+          const staffIds = await getOrganizerStaffMembers(event.id_organizer);
+          for (const sid of staffIds) {
+            if (sid !== userId) {
+              NotificationService.notify(sid, 'event_post', author.username,
+                `${author.username} publicó en "${event.title}"`,
+                { fromId: userId, fromPhoto: author.profile?.photo_url,
+                  targetId: wallId, targetType: 'event',
+                  targetLink: `/events/${wallId}` }
+              );
+            }
+          }
+        }
+      }
+    }
+
     return result;
   }
 
@@ -235,6 +263,33 @@ export class WallService {
           { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
             targetId: String(postId), targetType: 'post', targetLink }
         );
+      }
+    }
+
+    // Notify organizer staff on comment in event wall post
+    if (post && post.wall_type === 'event' && post.wall_id) {
+      const event = await prisma.event.findUnique({
+        where: { id_event: post.wall_id },
+        select: { id_organizer: true, title: true },
+      });
+      if (event?.id_organizer) {
+        const commenter = await prisma.user.findUnique({
+          where: { id_user: userId },
+          select: { username: true, profile: { select: { photo_url: true } } },
+        });
+        if (commenter) {
+          const staffIds = await getOrganizerStaffMembers(event.id_organizer);
+          for (const sid of staffIds) {
+            if (sid !== userId && sid !== post.id_user) {
+              NotificationService.notify(sid, 'event_comment', commenter.username,
+                `${commenter.username} comentó en una publicación de "${event.title}"`,
+                { fromId: userId, fromPhoto: commenter.profile?.photo_url,
+                  targetId: String(postId), targetType: 'post',
+                  targetLink: `/events/${post.wall_id}` }
+              );
+            }
+          }
+        }
       }
     }
 
@@ -324,6 +379,35 @@ export class WallService {
             { fromId: userId, fromPhoto: currentUser.profile?.photo_url,
               targetId: String(postId), targetType: 'post', targetLink }
           );
+        }
+      }
+
+      // Notify organizer staff on reaction in event wall post
+      if (post && post.wall_type === 'event' && post.wall_id) {
+        const event = await prisma.event.findUnique({
+          where: { id_event: post.wall_id },
+          select: { id_organizer: true, title: true },
+        });
+        if (event?.id_organizer) {
+          const reactor = await prisma.user.findUnique({
+            where: { id_user: userId },
+            select: { username: true, profile: { select: { photo_url: true } } },
+          });
+          if (reactor) {
+            const reactionEmoji = { like: '👍', love: '❤️', laugh: '😂', wow: '😮', sad: '😢', angry: '😡' };
+            const emoji = reactionEmoji[type] || '👍';
+            const staffIds = await getOrganizerStaffMembers(event.id_organizer);
+            for (const sid of staffIds) {
+              if (sid !== userId && sid !== post.id_user) {
+                NotificationService.notify(sid, 'event_reaction', reactor.username,
+                  `${reactor.username} reaccionó con ${emoji} en "${event.title}"`,
+                  { fromId: userId, fromPhoto: reactor.profile?.photo_url,
+                    targetId: String(postId), targetType: 'post',
+                    targetLink: `/events/${post.wall_id}` }
+                );
+              }
+            }
+          }
         }
       }
     }

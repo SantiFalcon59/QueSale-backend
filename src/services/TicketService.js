@@ -5,6 +5,7 @@ import UserModel from '../models/User.js';
 import MercadoPagoService from './MercadoPagoService.js';
 import RecommendationService, { InteractionType } from './RecommendationService.js';
 import { NotificationService } from './NotificationService.js';
+import { getOrganizerStaffMembers } from '../utils/organizerCheck.js';
 import prisma from '../config/prisma.js';
 import { generateId, generateTicketCode, generateQRCode } from '../utils/generators.js';
 
@@ -69,20 +70,22 @@ export class TicketService {
     // Generate QR code data (just the UUID)
     const qrCode = await generateQRCode(uuid);
 
-    // Notify organizer
+    // Notify organizer staff about ticket purchase
     const buyer = await prisma.user.findUnique({
       where: { id_user: userId },
       select: { username: true, profile: { select: { photo_url: true } } },
     });
     if (buyer && event.id_organizer) {
-      const org = await OrganizerModel.findById(event.id_organizer);
-      if (org && org.id_creator) {
-        NotificationService.notify(org.id_creator, 'ticket_purchase', buyer.username,
-          `${buyer.username} compró una entrada para "${event.title}"`,
-          { fromId: userId, fromPhoto: buyer.profile?.photo_url,
-            targetId: eventId, targetType: 'event',
-            targetLink: `/events/${eventId}` }
-        );
+      const staffIds = await getOrganizerStaffMembers(event.id_organizer);
+      for (const sid of staffIds) {
+        if (sid !== userId) {
+          NotificationService.notify(sid, 'ticket_purchase', buyer.username,
+            `${buyer.username} compró una entrada para "${event.title}"`,
+            { fromId: userId, fromPhoto: buyer.profile?.photo_url,
+              targetId: eventId, targetType: 'event',
+              targetLink: `/events/${eventId}` }
+          );
+        }
       }
     }
 

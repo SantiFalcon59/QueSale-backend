@@ -61,3 +61,25 @@ export async function isUserBlockedFromEvent(userId, eventId) {
   });
   return !!blocked;
 }
+
+/**
+ * Get all staff user IDs for an organizer (admins, moderators + creator)
+ */
+export async function getOrganizerStaffMembers(organizerId) {
+  if (!organizerId) return [];
+  const [admins, organizer] = await Promise.all([
+    prisma.organizerAdmin.findMany({
+      where: { id_organizer: organizerId },
+      select: { id_user: true },
+    }),
+    prisma.organizer.findUnique({
+      where: { id_organizer: organizerId },
+      select: { id_creator: true },
+    }),
+  ]);
+  const staffIds = new Set(admins.map(a => a.id_user));
+  if (organizer?.id_creator) staffIds.add(organizer.id_creator);
+  return [...staffIds];
+}
+
+
