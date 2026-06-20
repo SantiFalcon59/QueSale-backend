@@ -65,6 +65,18 @@ export class TicketController {
       if (!user) throw { statusCode: 404, message: 'User not found' };
 
       const result = await TicketService.validateTicket(ticketUuid, user.id_user);
+
+      // Emit real-time notification to the ticket owner if socket.io is active
+      if (req.io && result.user_id) {
+        const { notifyUser } = await import('../websocket/chatSocket.js');
+        notifyUser(req.io, result.user_id, 'ticket-validated', {
+          ticketId: result.id_ticket,
+          eventId: result.id_event,
+          eventTitle: result.event_title,
+          uuid: result.uuid,
+        });
+      }
+
       sendSuccess(res, result, 'Ticket validated successfully');
     } catch (error) {
       next(error);

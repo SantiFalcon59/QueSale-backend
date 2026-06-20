@@ -53,6 +53,7 @@ export class TicketModel {
       title: ticket.event?.title,
       date: ticket.event?.date,
       ubication: ticket.event?.ubication,
+      thumbnail_url: ticket.event?.thumbnail_url || null,
     }));
   }
 

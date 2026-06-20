@@ -29,6 +29,7 @@ import communityRoutes from './routes/communityRoutes.js';
 import wallRoutes from './routes/wallRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import allowedLocationRoutes from './routes/allowedLocationRoutes.js';
 
 // Import WebSocket
 import { initializeWebSocket } from './websocket/chatSocket.js';
@@ -109,6 +110,7 @@ app.use('/api/community', communityRoutes);
 app.use('/api/wall', wallRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/allowed-locations', allowedLocationRoutes);
 
 // API Documentation
 app.get('/api', (req, res) => {

@@ -566,3 +566,16 @@ model FeaturedEvent {
 
   @@map("featured_events")
 }
+
+model AllowedLocation {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(100)
+  type       String   @db.VarChar(20)          // "city", "partido", "province", "country"
+  state      String?  @db.VarChar(100)         // e.g. "Provincia de Buenos Aires"
+  country    String   @default("Argentina") @db.VarChar(100)
+  active     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("allowed_locations")
+}

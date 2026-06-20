@@ -2,6 +2,7 @@ import EventModel from '../models/Event.js';
 import { generateId } from '../utils/generators.js';
 import { NotificationService } from './NotificationService.js';
 import { getOrganizerStaffMembers } from '../utils/organizerCheck.js';
+import AllowedLocationService from './AllowedLocationService.js';
 
 const getDateRange = (quickDate) => {
   const now = new Date();
@@ -42,6 +43,16 @@ const getDateRange = (quickDate) => {
 
 export class EventService {
   static async createEvent(eventData, organizerId, userId) {
+    const isAllowed = await AllowedLocationService.checkLocation({
+      city: eventData.city,
+      state: eventData.state,
+      country: eventData.country
+    });
+
+    if (!isAllowed) {
+      throw { statusCode: 400, message: 'La aplicación todavía no está disponible en esta ubicación.' };
+    }
+
     const eventId = generateId();
     const event = await EventModel.create({
       id_event: eventId,
@@ -213,6 +224,18 @@ export class EventService {
 
     if (event.id_creator !== userId && !isGlobalAdminOrMod) {
       throw { statusCode: 403, message: 'Unauthorized to update this event' };
+    }
+
+    if (updateData.location !== undefined || updateData.latitude !== undefined) {
+      const isAllowed = await AllowedLocationService.checkLocation({
+        city: updateData.city,
+        state: updateData.state,
+        country: updateData.country
+      });
+
+      if (!isAllowed) {
+        throw { statusCode: 400, message: 'La aplicación todavía no está disponible en esta ubicación.' };
+      }
     }
 
     const updated = await EventModel.update(eventId, {

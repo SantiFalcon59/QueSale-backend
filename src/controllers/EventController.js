@@ -16,14 +16,18 @@ export class EventController {
       const { 
         title, description, date, location, interestIds, organizerId, is_external, 
         external_organizer_name, external_organizer_url,
-        external_instagram, external_tiktok, external_twitter 
+        external_instagram, external_tiktok, external_twitter,
+        latitude, longitude, price, capacity, thumbnail_url, ticket_type, ticket_url, qr_enabled, tags,
+        city, state, country
       } = req.body;
       
       const event = await EventService.createEvent(
         { 
           title, description, date, location, interestIds, is_external, 
           external_organizer_name, external_organizer_url,
-          external_instagram, external_tiktok, external_twitter 
+          external_instagram, external_tiktok, external_twitter,
+          latitude, longitude, price, capacity, thumbnail_url, ticket_type, ticket_url, qr_enabled, tags,
+          city, state, country
         },
         organizerId,
         userId
