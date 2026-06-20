@@ -20,7 +20,7 @@ export class FeaturedEventService {
       level_1: {
         level: 1,
         name: 'Destacado Semanal',
-        price: 6000,
+        price: 10,
         duration_days: 7,
         visibility: 'Standard featured placement',
         description: 'Tu evento aparecerá en la sección de recomendados por una semana completa.',
@@ -28,7 +28,7 @@ export class FeaturedEventService {
       level_2: {
         level: 2,
         name: 'Destacado Mensual',
-        price: 20000,
+        price: 10,
         duration_days: 30,
         visibility: 'Premium featured placement',
         description: 'Máxima visibilidad. Tu evento estará destacado durante un mes entero.',
