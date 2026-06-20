@@ -29,6 +29,9 @@ export const config = {
     origin: [
       'http://localhost:5082',
       'https://quesale.splindux.com',
+      'https://localhost',
+      'http://localhost',
+      'capacitor://localhost',
       ...(process.env.CORS_ORIGIN?.split(',') || []),
     ],
     credentials: true,
