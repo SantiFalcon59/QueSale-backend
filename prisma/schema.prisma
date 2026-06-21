@@ -79,6 +79,7 @@ model User {
   blocksInEvents          EventBlockedUser[]   @relation("UserBlocker")
   interactions            UserInteraction[]
   embedding               Json?                // [JINA AI] User interest vector
+  deviceTokens            UserDeviceToken[]
 
   @@map("users")
 }
@@ -96,6 +97,18 @@ model Notification {
   user            User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model UserDeviceToken {
+  id         BigInt   @id @default(autoincrement())
+  id_user    String   @db.VarChar(36)
+  token      String   @unique @db.VarChar(255)
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [id_user], references: [id_user], onDelete: Cascade)
+
+  @@index([id_user])
+  @@map("user_device_tokens")
 }
 
 model FeaturedPricing {

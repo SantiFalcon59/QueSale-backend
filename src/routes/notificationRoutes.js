@@ -13,6 +13,20 @@ const router = express.Router();
 router.get('/', authenticateToken, paginationMiddleware, NotificationController.getNotifications);
 
 /**
+ * @route   POST /notifications/register-token
+ * @desc    Register a device token for push notifications
+ * @access  Private
+ */
+router.post('/register-token', authenticateToken, NotificationController.registerToken);
+
+/**
+ * @route   POST /notifications/unregister-token
+ * @desc    Unregister a device token
+ * @access  Private
+ */
+router.post('/unregister-token', authenticateToken, NotificationController.unregisterToken);
+
+/**
  * @route   POST /notifications/:userId
  * @desc    Create a notification for a user
  * @access  Private

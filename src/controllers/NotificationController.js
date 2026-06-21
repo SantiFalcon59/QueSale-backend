@@ -1,4 +1,5 @@
 import NotificationService from '../services/NotificationService.js';
+import DeviceTokenModel from '../models/DeviceToken.js';
 import { sendSuccess, sendPaginated } from '../utils/response.js';
 
 /**
@@ -69,6 +70,39 @@ export class NotificationController {
       const userId = req.user.id;
       await NotificationService.deleteNotification(notificationId, userId);
       sendSuccess(res, null, 'Notification deleted');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Register FCM Token
+   */
+  static async registerToken(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ error: { message: 'Token is required' } });
+      }
+      await DeviceTokenModel.register(userId, token);
+      sendSuccess(res, null, 'Device token registered successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Unregister FCM Token
+   */
+  static async unregisterToken(req, res, next) {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ error: { message: 'Token is required' } });
+      }
+      await DeviceTokenModel.unregister(token);
+      sendSuccess(res, null, 'Device token unregistered successfully');
     } catch (error) {
       next(error);
     }
