@@ -235,7 +235,19 @@ export class TicketController {
       }
 
       const externalReference = JSON.parse(payment.external_reference);
-      if (externalReference.type !== 'ticket_purchase' || externalReference.eventId !== eventId || externalReference.userId !== user.id_user) {
+      // external_reference.userId stores the Firebase UID (not DB id_user)
+      if (
+        externalReference.type !== 'ticket_purchase' ||
+        externalReference.eventId !== eventId ||
+        (externalReference.userId !== user.firebase_uid && externalReference.userId !== user.id_user)
+      ) {
+        console.warn('[VERIFY PURCHASE] Reference mismatch', {
+          refUserId: externalReference.userId,
+          firebaseUid: user.firebase_uid,
+          dbUserId: user.id_user,
+          refEventId: externalReference.eventId,
+          eventId,
+        });
         throw { statusCode: 403, message: 'Invalid payment reference' };
       }
 
