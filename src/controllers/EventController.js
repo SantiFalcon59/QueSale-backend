@@ -198,7 +198,31 @@ export class EventController {
       const userId = req.user.id;
       const isOrg = await isEventOrganizer(userId, eventId);
       const isMod = await isEventModerator(userId, eventId);
-      return sendSuccess(res, { isOrganizer: isOrg, isModerator: isMod });
+
+      // Check if user is actually staff of the organization (without global roles check)
+      const event = await prisma.event.findUnique({
+        where: { id_event: eventId },
+        select: { id_organizer: true, id_creator: true },
+      });
+      let isActualStaff = false;
+      if (event) {
+        if (event.id_creator === userId) {
+          isActualStaff = true;
+        } else if (event.id_organizer) {
+          const admin = await prisma.organizerAdmin.findUnique({
+            where: { id_user_id_organizer: { id_user: userId, id_organizer: event.id_organizer } },
+          });
+          if (admin && ['admin', 'editor'].includes(admin.role)) {
+            isActualStaff = true;
+          }
+        }
+      }
+
+      return sendSuccess(res, { 
+        isOrganizer: isOrg, 
+        isModerator: isMod,
+        isActualStaff
+      });
     } catch (error) {
       next(error);
     }

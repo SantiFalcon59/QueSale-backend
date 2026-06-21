@@ -83,4 +83,6 @@ router.get(
   TicketController.getEventAttendees
 );
 
+// New verification endpoint to directly confirm payment status
+router.post('/verify-purchase', authenticateToken, TicketController.verifyPurchase);
 export default router;

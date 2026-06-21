@@ -120,9 +120,12 @@ export class TicketController {
     try {
       const orgId = req.query.orgId;
       const type = req.body?.type || req.query?.topic;
+      const action = req.body?.action;
       const paymentId = req.body?.data?.id || req.query?.id;
 
-      if (type === 'payment' && paymentId && orgId) {
+      console.log(`[WEBHOOK HIT] orgId: ${orgId}, type: ${type}, action: ${action}, paymentId: ${paymentId}`);
+
+      if (paymentId && orgId && (type === 'payment' || (action && action.startsWith('payment.')))) {
         console.log(`[WEBHOOK] Mercado Pago payment received: ${paymentId} for org: ${orgId}`);
         
         try {
@@ -192,6 +195,114 @@ export class TicketController {
     } catch (error) {
       console.error('[WEBHOOK OUTER ERROR]', error);
       res.status(200).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * Verify purchase directly from payment ID
+   */
+  static async verifyPurchase(req, res, next) {
+    try {
+      const { paymentId, eventId } = req.body;
+      const firebaseUid = req.user.id;
+      
+      const user = await prisma.user.findUnique({ where: { firebase_uid: firebaseUid } });
+      if (!user) throw { statusCode: 404, message: 'User not found' };
+
+      if (!paymentId || !eventId) {
+        throw { statusCode: 400, message: 'Payment ID and Event ID are required' };
+      }
+
+      console.log(`[VERIFY PURCHASE REQUEST] user: ${user.id_user}, paymentId: ${paymentId}, eventId: ${eventId}`);
+
+      const EventModel = (await import('../models/Event.js')).default;
+      const OrganizerModel = (await import('../models/Organizer.js')).default;
+      const TicketModel = (await import('../models/Ticket.js')).default;
+      const MercadoPagoService = (await import('../services/MercadoPagoService.js')).default;
+      const { generateId, generateTicketCode } = await import('../utils/generators.js');
+
+      const event = await EventModel.findById(eventId);
+      if (!event) throw { statusCode: 404, message: 'Event not found' };
+
+      const organizer = await OrganizerModel.findById(event.id_organizer);
+      if (!organizer || !organizer.mp_access_token) {
+        throw { statusCode: 400, message: 'Organizer credentials not found' };
+      }
+
+      const payment = await MercadoPagoService.verifyPayment(paymentId, organizer.mp_access_token);
+      if (!payment || payment.status !== 'approved') {
+        throw { statusCode: 400, message: 'Payment is not approved' };
+      }
+
+      const externalReference = JSON.parse(payment.external_reference);
+      if (externalReference.type !== 'ticket_purchase' || externalReference.eventId !== eventId || externalReference.userId !== user.id_user) {
+        throw { statusCode: 403, message: 'Invalid payment reference' };
+      }
+
+      // Check if ticket already exists
+      let ticket = await prisma.ticket.findFirst({
+        where: { id_user: user.id_user, id_event: eventId }
+      });
+
+      if (!ticket) {
+        const ticketId = generateId();
+        const uuid = generateTicketCode();
+
+        ticket = await prisma.ticket.create({
+          data: {
+            id_ticket: ticketId,
+            uuid,
+            id_event: eventId,
+            id_user: user.id_user,
+            state: 1, // Active
+            buy_date: new Date(),
+          }
+        });
+
+        // Send notifications
+        try {
+          const buyer = await prisma.user.findUnique({
+            where: { id_user: user.id_user },
+            select: { username: true, profile: { select: { photo_url: true } } },
+          });
+          const eventData = await prisma.event.findUnique({
+            where: { id_event: eventId },
+            select: { title: true, id_organizer: true },
+          });
+          if (buyer && eventData && eventData.id_organizer) {
+            const { getOrganizerStaffMembers } = await import('../utils/organizerCheck.js');
+            const { NotificationService } = await import('../services/NotificationService.js');
+            const staffIds = await getOrganizerStaffMembers(eventData.id_organizer);
+            for (const sid of staffIds) {
+              if (sid !== user.id_user) {
+                NotificationService.notify(sid, 'ticket_purchase', buyer.username,
+                  `${buyer.username} compró una entrada para "${eventData.title}"`,
+                  { fromId: user.id_user, fromPhoto: buyer.profile?.photo_url,
+                    targetId: eventId, targetType: 'event',
+                    targetLink: `/events/${eventId}` }
+                );
+              }
+            }
+          }
+        } catch (notifErr) {
+          console.error('[VERIFY PURCHASE NOTIFICATION ERROR]', notifErr);
+        }
+
+        console.log(`[VERIFY PURCHASE] Ticket created manually for user ${user.id_user} in event ${eventId}`);
+      }
+
+      const formattedTicket = {
+        id_ticket: ticket.id_ticket,
+        uuid: ticket.uuid,
+        id_event: ticket.id_event,
+        state: ticket.state,
+        buy_date: ticket.buy_date,
+      };
+
+      sendSuccess(res, formattedTicket, 'Purchase verified and ticket created');
+    } catch (error) {
+      console.error('[VERIFY PURCHASE ERROR]', error);
+      next(error);
     }
   }
 }
