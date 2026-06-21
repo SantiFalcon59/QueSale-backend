@@ -2,6 +2,7 @@ import EventService from '../services/EventService.js';
 import RecommendationService, { InteractionType } from '../services/RecommendationService.js';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
 import { isEventOrganizer, isEventModerator } from '../utils/organizerCheck.js';
+import prisma from '../config/prisma.js';
 
 /**
  * Event Controller
