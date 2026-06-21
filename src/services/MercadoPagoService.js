@@ -35,7 +35,7 @@ export class MercadoPagoService {
       },
       back_urls: {
         success: `${process.env.FRONTEND_URL || 'https://quesale.splindux.com'}/my-tickets?status=success`,
-        failure: `${process.env.FRONTEND_URL || 'https://quesale.splindux.com'}/event/${event.id_event}?status=failure`,
+        failure: `${process.env.FRONTEND_URL || 'https://quesale.splindux.com'}/events/${event.id_event}?status=failure`,
         pending: `${process.env.FRONTEND_URL || 'https://quesale.splindux.com'}/my-tickets?status=pending`,
       },
       auto_return: 'approved',
