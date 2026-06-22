@@ -133,10 +133,16 @@ export class EventService {
     const attendeesCount = await EventModel.getAttendeesCount(eventId);
     const isFavorited = userId ? await EventModel.isFavorited(eventId, userId) : false;
 
+    const { default: prisma } = await import('../config/prisma.js');
+    const hasTicket = userId ? await prisma.ticket.findFirst({
+      where: { id_event: eventId, id_user: userId, state: { in: [1, 2] } }
+    }).then(t => !!t) : false;
+
     return {
       ...event,
       attendeesCount,
       isFavorited,
+      hasTicket,
       interests: interests.map(i => ({ id: i.id_interest, name: i.name })),
       tags,
     };

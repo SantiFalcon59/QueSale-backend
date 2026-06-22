@@ -95,7 +95,11 @@ export class TicketModel {
    */
   static async hasTicket(userId, eventId) {
     const result = await prisma.ticket.findFirst({
-      where: { id_user: userId, id_event: eventId },
+      where: { 
+        id_user: userId, 
+        id_event: eventId,
+        state: { in: [1, 2] }
+      },
     });
     return !!result;
   }
