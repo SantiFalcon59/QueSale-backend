@@ -1,15 +1,15 @@
 import express from 'express';
 import AllowedLocationController from '../controllers/AllowedLocationController.js';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin, requireModerator } from '../middleware/auth.js';
 
 const router = express.Router();
 
 /**
  * @route   GET /api/allowed-locations
  * @desc    Get all allowed locations (including inactive for admin management)
- * @access  Private (Admin only)
+ * @access  Private (Admin/Moderator only)
  */
-router.get('/', authenticateToken, requireAdmin, AllowedLocationController.getAll);
+router.get('/', authenticateToken, requireModerator, AllowedLocationController.getAll);
 
 /**
  * @route   GET /api/allowed-locations/active
