@@ -129,10 +129,12 @@ export class AuthService {
         throw { statusCode: 401, message: 'Invalid Firebase token' };
       }
 
+      let isNew = false;
       let user = await UserModel.findById(uid);
       console.log('Firebase login - User lookup:', { uid, found: !!user, username: user?.username });
 
       if (!user) {
+        isNew = true;
         const username = await this.buildAvailableUsername(name || email.split('@')[0]);
         console.log('Creating new user from Firebase:', { uid, email, name, username });
         
@@ -163,6 +165,7 @@ export class AuthService {
       return {
         user,
         token,
+        isNew,
         message: 'Login successful',
       };
     } catch (error) {

@@ -61,6 +61,15 @@ export class EventService {
       throw { statusCode: 400, message: 'La aplicación todavía no está disponible en esta ubicación.' };
     }
 
+    if (eventData.is_external) {
+      if (eventData.ticket_type && !['free', 'external', 'door'].includes(eventData.ticket_type)) {
+        throw { statusCode: 400, message: 'Para eventos externos, el tipo de entrada debe ser gratuita, link externo o en puerta.' };
+      }
+      if (eventData.qr_enabled) {
+        throw { statusCode: 400, message: 'Los eventos externos no pueden tener entradas por QR.' };
+      }
+    }
+
     const eventId = generateId();
     const event = await EventModel.create({
       id_event: eventId,
@@ -97,26 +106,28 @@ export class EventService {
     }
 
     // Notify organizer followers about the new event
-    const { default: prisma } = await import('../config/prisma.js');
-    const followers = await prisma.organizerFollower.findMany({
-      where: { id_organizer: organizerId },
-      select: { id_user: true },
-    });
-    if (followers.length > 0) {
-      const organizerData = await prisma.organizer.findUnique({
+    if (organizerId) {
+      const { default: prisma } = await import('../config/prisma.js');
+      const followers = await prisma.organizerFollower.findMany({
         where: { id_organizer: organizerId },
-        select: { name: true },
+        select: { id_user: true },
       });
-      const organizerName = organizerData?.name || 'Una organización';
-      await prisma.notification.createMany({
-        data: followers.map(f => ({
-          id_user: f.id_user,
-          type: 'event_update',
-          title: organizerName,
-          message: `${organizerName} publicó un nuevo evento: "${eventData.title}"`,
-          data: { targetId: eventId, targetType: 'event', targetLink: `/events/${eventId}` },
-        })),
-      });
+      if (followers.length > 0) {
+        const organizerData = await prisma.organizer.findUnique({
+          where: { id_organizer: organizerId },
+          select: { name: true },
+        });
+        const organizerName = organizerData?.name || 'Una organización';
+        await prisma.notification.createMany({
+          data: followers.map(f => ({
+            id_user: f.id_user,
+            type: 'event_update',
+            title: organizerName,
+            message: `${organizerName} publicó un nuevo evento: "${eventData.title}"`,
+            data: { targetId: eventId, targetType: 'event', targetLink: `/events/${eventId}` },
+          })),
+        });
+      }
     }
 
     return event;
@@ -284,6 +295,19 @@ export class EventService {
 
       if (!isAllowed) {
         throw { statusCode: 400, message: 'La aplicación todavía no está disponible en esta ubicación.' };
+      }
+    }
+
+    const isExternalNow = updateData.is_external !== undefined ? updateData.is_external : event.is_external;
+    if (isExternalNow) {
+      const ticketTypeToCheck = updateData.ticket_type !== undefined ? updateData.ticket_type : event.ticket_type;
+      const qrEnabledToCheck = updateData.qr_enabled !== undefined ? updateData.qr_enabled : event.qr_enabled;
+
+      if (ticketTypeToCheck && !['free', 'external', 'door'].includes(ticketTypeToCheck)) {
+        throw { statusCode: 400, message: 'Para eventos externos, el tipo de entrada debe ser gratuita, link externo o en puerta.' };
+      }
+      if (qrEnabledToCheck) {
+        throw { statusCode: 400, message: 'Los eventos externos no pueden tener entradas por QR.' };
       }
     }
 
