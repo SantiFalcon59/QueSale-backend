@@ -93,6 +93,10 @@ export class AuthService {
         throw { statusCode: 401, message: 'Credenciales inválidas' };
       }
 
+      if (user.global_role === 'banned') {
+        throw { statusCode: 403, message: 'Tu cuenta ha sido suspendida.' };
+      }
+
       // Verify with Firebase
       let firebaseUser;
       try {
@@ -132,6 +136,10 @@ export class AuthService {
       let isNew = false;
       let user = await UserModel.findById(uid);
       console.log('Firebase login - User lookup:', { uid, found: !!user, username: user?.username });
+
+      if (user && user.global_role === 'banned') {
+        throw { statusCode: 403, message: 'Tu cuenta ha sido suspendida.' };
+      }
 
       if (!user) {
         isNew = true;
