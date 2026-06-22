@@ -79,23 +79,23 @@ router.delete('/saved-events/:eventId', authenticateToken, UserController.unsave
 
 /**
  * @route   GET /users
- * @desc    Get users list (admin)
+ * @desc    Get users list (admin/moderator)
  * @access  Private
  */
-router.get('/', authenticateToken, requireAdmin, paginationMiddleware, UserController.getUsers);
+router.get('/', authenticateToken, requireModerator, paginationMiddleware, UserController.getUsers);
 
 /**
  * @route   PUT /users/:userId/role
- * @desc    Update user global role (admin only)
+ * @desc    Update user global role (admin/moderator)
  * @access  Private
  */
 router.put(
   '/:userId/role',
   authenticateToken,
-  requireAdmin,
+  requireModerator,
   [
     param('userId').isString().notEmpty(),
-    body('role').isIn(['admin', 'moderator', 'user']).withMessage('Invalid role'),
+    body('role').isIn(['admin', 'moderator', 'user', 'banned']).withMessage('Invalid role'),
   ],
   handleValidationErrors,
   UserController.updateGlobalRole

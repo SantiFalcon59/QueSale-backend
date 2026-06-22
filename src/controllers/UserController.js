@@ -17,12 +17,36 @@ export class UserController {
   }
 
   /**
-   * Update User Global Role (Admin only)
+   * Update User Global Role (Admin/Moderator)
    */
   static async updateGlobalRole(req, res, next) {
     try {
       const { userId } = req.params;
       const { role } = req.body;
+      const requesterRole = req.user.global_role;
+
+      // Fetch target user's current role
+      const targetUser = await prisma.user.findUnique({
+        where: { id_user: userId },
+        select: { global_role: true }
+      });
+
+      if (!targetUser) {
+        throw { statusCode: 404, message: 'User not found' };
+      }
+
+      if (requesterRole === 'moderator') {
+        // Moderator can only set user to 'banned' or 'user'
+        if (role !== 'user' && role !== 'banned') {
+          throw { statusCode: 403, message: 'Moderators can only ban or unban users' };
+        }
+        // Moderator cannot ban/unban admins or other moderators
+        if (targetUser.global_role === 'admin' || targetUser.global_role === 'moderator') {
+          throw { statusCode: 403, message: 'Cannot modify role of an admin or moderator' };
+        }
+      } else if (requesterRole !== 'admin') {
+        throw { statusCode: 403, message: 'Forbidden' };
+      }
       
       const updatedUser = await prisma.user.update({
         where: { id_user: userId },

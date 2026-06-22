@@ -37,6 +37,12 @@ export const authenticateToken = async (req, res, next) => {
       });
       
       if (dbUser) {
+        if (dbUser.global_role === 'banned') {
+          return res.status(403).json({
+            success: false,
+            error: { message: 'Tu cuenta ha sido suspendida.' },
+          });
+        }
         req.user.id_user = dbUser.id_user;
         req.user.global_role = dbUser.global_role || 'user';
         req.user.is_premium = !!dbUser.is_premium;
@@ -78,6 +84,9 @@ export const optionalAuthenticateToken = async (req, res, next) => {
       });
       
       if (dbUser) {
+        if (dbUser.global_role === 'banned') {
+          return next();
+        }
         req.user.id_user = dbUser.id_user;
         req.user.global_role = dbUser.global_role || 'user';
         req.user.is_premium = !!dbUser.is_premium;

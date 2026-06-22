@@ -373,9 +373,10 @@ export class EventService {
 
     const { default: prisma } = await import('../config/prisma.js');
     const dbUser = await prisma.user.findUnique({ where: { firebase_uid: reqUser.id } });
-    const isGlobalAdminOrMod = ['admin', 'moderator'].includes(reqUser.global_role) || (dbUser && ['admin', 'moderator'].includes(dbUser.global_role));
+    const isGlobalAdmin = reqUser.global_role === 'admin' || dbUser?.global_role === 'admin';
 
-    if (event.id_creator !== reqUser.id && event.id_creator !== dbUser?.id_user && !isGlobalAdminOrMod) {
+    // Creators and global admins can delete. Global moderators are NOT allowed to delete unless they are the creator.
+    if (event.id_creator !== reqUser.id && event.id_creator !== dbUser?.id_user && !isGlobalAdmin) {
       throw { statusCode: 403, message: 'Unauthorized to delete this event' };
     }
 
