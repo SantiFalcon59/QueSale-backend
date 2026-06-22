@@ -45,7 +45,7 @@ router.post(
     body('description').notEmpty().trim(),
     body('date').isISO8601(),
     body('location').notEmpty().trim(),
-    body('organizerId').notEmpty(),
+    body('organizerId').optional({ nullable: true }),
     body('interestIds').optional().isArray(),
   ],
   handleValidationErrors,

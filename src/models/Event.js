@@ -132,14 +132,12 @@ export class EventModel {
       where.AND = andConditions;
     }
 
-    return await prisma.event.findMany({
+    const queryOptions = {
       where,
       orderBy: [
         { featured_level: 'desc' },
         { date: 'asc' }
       ],
-      take: limit,
-      skip: offset,
       include: {
         creator: {
           select: {
@@ -156,7 +154,16 @@ export class EventModel {
           }
         }
       }
-    });
+    };
+
+    if (limit !== undefined && limit !== null) {
+      queryOptions.take = limit;
+    }
+    if (offset !== undefined && offset !== null) {
+      queryOptions.skip = offset;
+    }
+
+    return await prisma.event.findMany(queryOptions);
   }
 
   /**

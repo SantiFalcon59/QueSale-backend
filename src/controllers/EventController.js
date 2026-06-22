@@ -59,6 +59,9 @@ export class EventController {
         priceMax: req.query.priceMax ? Number(req.query.priceMax) : undefined,
         search: req.query.search,
         tags: req.query.tags ? req.query.tags.split(',') : undefined,
+        latitude: req.query.latitude ? Number(req.query.latitude) : undefined,
+        longitude: req.query.longitude ? Number(req.query.longitude) : undefined,
+        radius: req.query.radius ? Number(req.query.radius) : undefined,
       };
 
       // Log behavior signals
@@ -213,7 +216,7 @@ export class EventController {
           const admin = await prisma.organizerAdmin.findUnique({
             where: { id_user_id_organizer: { id_user: userId, id_organizer: event.id_organizer } },
           });
-          if (admin && ['admin', 'editor'].includes(admin.role)) {
+          if (admin && ['admin', 'moderator'].includes(admin.role)) {
             isActualStaff = true;
           }
         }

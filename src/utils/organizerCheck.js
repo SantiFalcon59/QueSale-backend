@@ -48,11 +48,11 @@ export async function isEventModerator(userId, eventId) {
     where: { id_user_id_organizer: { id_user: userId, id_organizer: event.id_organizer } },
   });
   if (!admin) return false;
-  return ['admin', 'editor'].includes(admin.role);
+  return ['admin', 'moderator'].includes(admin.role);
 }
 
 export async function canCreateAnnouncement(userId, eventId) {
-  return isEventOrganizer(userId, eventId);
+  return isEventModerator(userId, eventId);
 }
 
 export async function isUserBlockedFromEvent(userId, eventId) {

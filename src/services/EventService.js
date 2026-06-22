@@ -41,6 +41,14 @@ const getDateRange = (quickDate) => {
   return { dateFrom, dateTo };
 };
 
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export class EventService {
   static async createEvent(eventData, organizerId, userId) {
     const isAllowed = await AllowedLocationService.checkLocation({
@@ -137,6 +145,14 @@ export class EventService {
   static async getEvents(pagination, filters = {}, userId = null) {
     const dbFilters = { ...filters };
 
+    const latitude = dbFilters.latitude;
+    const longitude = dbFilters.longitude;
+    const radius = dbFilters.radius;
+
+    delete dbFilters.latitude;
+    delete dbFilters.longitude;
+    delete dbFilters.radius;
+
     if (filters.quickDate) {
       const { dateFrom, dateTo } = getDateRange(filters.quickDate);
       dbFilters.dateFrom = dateFrom?.toISOString();
@@ -144,8 +160,35 @@ export class EventService {
       delete dbFilters.quickDate;
     }
 
-    const events = await EventModel.getAll(pagination.limit, pagination.offset, dbFilters);
-    const total = await EventModel.count(dbFilters);
+    const hasDistanceFilter = latitude !== undefined && longitude !== undefined && radius !== undefined;
+
+    let events;
+    let total;
+
+    if (hasDistanceFilter) {
+      // Fetch all matching events without limit/offset
+      const allEvents = await EventModel.getAll(undefined, undefined, dbFilters);
+      
+      // Filter by distance in memory
+      const filteredEvents = allEvents.filter(e => {
+        if (!e.latitude || !e.longitude) return false;
+        const dist = haversine(
+          Number(latitude),
+          Number(longitude),
+          parseFloat(e.latitude),
+          parseFloat(e.longitude)
+        );
+        return dist <= Number(radius);
+      });
+
+      total = filteredEvents.length;
+      
+      // Apply offset and limit
+      events = filteredEvents.slice(pagination.offset, pagination.offset + pagination.limit);
+    } else {
+      events = await EventModel.getAll(pagination.limit, pagination.offset, dbFilters);
+      total = await EventModel.count(dbFilters);
+    }
     
     const { default: prisma } = await import('../config/prisma.js');
     const totalActive = await prisma.event.count({ where: { status: 'active', date: { gte: new Date() } } });
